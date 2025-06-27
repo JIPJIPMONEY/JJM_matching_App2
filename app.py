@@ -22,7 +22,7 @@ st.set_page_config(
 
 # Data paths - check both local and mounted data directory
 DATA_DIR = "/app/data" if os.path.exists("/app/data") else "."
-EXCEL_FILE = os.path.join(DATA_DIR, "Customer_Loan_2025_06_07.xlsx")
+EXCEL_FILE = os.path.join(DATA_DIR, "Customer_test.xlsx")
 
 # BRAND_KEYWORDS directory - check multiple possible locations
 if os.path.exists("/app/BRAND_KEYWORDS"):
