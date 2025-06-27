@@ -1,4 +1,4 @@
-# Customer Loan Management App v1.0 🏦
+# Back Office matching v1.1 🏦
 
 **Professional Docker-ready application for managing customer loan records with keyword validation.**
 
