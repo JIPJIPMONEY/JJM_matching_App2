@@ -1,0 +1,816 @@
+"""
+Customer Loan Management App - Production Version v1.0
+Docker-ready Streamlit application for managing customer loan records
+"""
+
+import streamlit as st
+import pandas as pd
+import os
+import json
+from urllib.parse import urlparse
+import requests
+from PIL import Image
+
+# Configure page
+st.set_page_config(
+    page_title="Back office matching v1.1",
+    page_icon="🏦",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Data paths - check both local and mounted data directory
+DATA_DIR = "/app/data" if os.path.exists("/app/data") else "."
+EXCEL_FILE = os.path.join(DATA_DIR, "Customer_Loan_2025_06_07.xlsx")
+
+# BRAND_KEYWORDS directory - check multiple possible locations
+if os.path.exists("/app/BRAND_KEYWORDS"):
+    # Running in Docker, keywords are in /app/BRAND_KEYWORDS
+    KEYWORDS_DIR = "/app/BRAND_KEYWORDS"
+elif os.path.exists(os.path.join(DATA_DIR, "BRAND_KEYWORDS")):
+    # Running locally or keywords mounted in data directory
+    KEYWORDS_DIR = os.path.join(DATA_DIR, "BRAND_KEYWORDS")
+else:
+    # Fallback to current directory
+    KEYWORDS_DIR = "BRAND_KEYWORDS"
+
+class DataManager:
+    def __init__(self, excel_file=EXCEL_FILE):
+        self.excel_file = excel_file
+        self.data_cache = None
+        self.modified_data = {}
+        self.fixed_records = set()
+        self.unfixed_records = set()
+        
+    def load_data(self):
+        try:
+            if self.data_cache is None:
+                if not os.path.exists(self.excel_file):
+                    st.error(f"❌ Excel file not found: {self.excel_file}")
+                    st.info("💡 Please ensure your Excel file is in the data directory")
+                    return None
+                    
+                self.data_cache = pd.read_excel(self.excel_file)
+                
+                # Check if Status column exists, if not create it
+                if 'Status' not in self.data_cache.columns:
+                    self.data_cache['Status'] = 0
+                    st.success("📋 Added Status column (0=unfixed, 1=fixed)")
+                    self.save_to_excel()
+                
+                # Load tracking data from Status column
+                self.load_tracking_from_status()
+                        
+            return self.data_cache
+        except Exception as e:
+            st.error(f"Error loading data: {str(e)}")
+            return None
+    
+    def load_tracking_from_status(self):
+        """Load tracking data from the Status column"""
+        if self.data_cache is not None and 'Status' in self.data_cache.columns:
+            self.fixed_records = set(self.data_cache[self.data_cache['Status'] == 1].index)
+            self.unfixed_records = set(self.data_cache[self.data_cache['Status'] == 0].index)
+        else:
+            self.unfixed_records = set(self.data_cache.index) if self.data_cache is not None else set()
+            self.fixed_records = set()
+    
+    def save_to_excel(self, filename=None):
+        """Save current data back to Excel file"""
+        if self.data_cache is not None:
+            if filename is None:
+                filename = self.excel_file
+            
+            try:
+                self.data_cache.to_excel(filename, index=False)
+                return True
+            except Exception as e:
+                st.error(f"❌ Error saving to Excel: {e}")
+                return False
+        return False
+    
+    def get_record(self, index):
+        if self.data_cache is not None and index in self.data_cache.index:
+            return self.data_cache.iloc[index].to_dict()
+        return None
+    
+    def update_record(self, index, updated_data):
+        if self.data_cache is not None:
+            for column, value in updated_data.items():
+                if column in self.data_cache.columns:
+                    self.data_cache.loc[index, column] = value
+            
+            self.modified_data[index] = updated_data
+            
+            # Update tracking in memory
+            if index in self.unfixed_records:
+                self.unfixed_records.remove(index)
+            self.fixed_records.add(index)
+            
+            # Update Status column in the dataframe
+            self.data_cache.loc[index, 'Status'] = 1
+            
+            # Save to Excel file immediately
+            self.save_to_excel()
+            
+            return True
+        return False
+    
+    def get_tracking_stats(self):
+        return {
+            'total': len(self.data_cache) if self.data_cache is not None else 0,
+            'fixed': len(self.fixed_records),
+            'unfixed': len(self.unfixed_records)
+        }
+    
+    def export_to_excel(self, filename=None):
+        """Export current data to Excel file"""
+        if self.data_cache is not None:
+            if filename is None:
+                timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+                filename = os.path.join(DATA_DIR, f"Customer_Loan_Updated_{timestamp}.xlsx")
+            
+            try:
+                self.data_cache.to_excel(filename, index=False)
+                return filename
+            except Exception as e:
+                st.error(f"❌ Error exporting to Excel: {e}")
+                return None
+        return None
+    
+    def reset_tracking(self):
+        """Reset all tracking data"""
+        if self.data_cache is not None:
+            self.fixed_records = set()
+            self.unfixed_records = set(self.data_cache.index)
+            self.data_cache['Status'] = 0
+            self.save_to_excel()
+            return True
+        return False
+
+class KeywordManager:
+    def __init__(self, keywords_dir=KEYWORDS_DIR):
+        self.keywords_dir = keywords_dir
+        self.keywords_cache = {}
+        self.global_data = {}
+        self.load_all_keywords()
+    
+    def load_all_keywords(self):
+        """Load brand keywords from JSON files listed in brands_list.txt"""
+        try:
+            if not os.path.exists(self.keywords_dir):
+                return
+                
+            brands_list_file = os.path.join(self.keywords_dir, "brands_list.txt")
+            
+            if os.path.exists(brands_list_file):
+                # Load brands from the brands_list.txt file
+                with open(brands_list_file, 'r', encoding='utf-8') as f:
+                    brand_files = [line.strip() for line in f 
+                                 if line.strip() and not line.strip().startswith('#')]
+                
+                for brand_file in brand_files:
+                    # Handle both old format (BRAND/file.json) and new format (file.json)
+                    if '/' in brand_file:
+                        # Old format: CHANEL/chanel_keywords.json
+                        brand_name = brand_file.split('/')[0]
+                        filename = brand_file.split('/')[1]
+                    else:
+                        # New format: chanel_keywords.json
+                        filename = brand_file
+                        brand_name = brand_file.replace('_keywords.json', '').replace('.json', '')
+                    
+                    # Try to find the file directly in keywords_dir
+                    brand_path = os.path.join(self.keywords_dir, filename)
+                    if os.path.exists(brand_path):
+                        self.load_brand_keywords(brand_path, brand_name)
+            else:
+                # Fallback: auto-discover JSON files in the directory
+                for item in os.listdir(self.keywords_dir):
+                    if item.endswith('.json') and 'keywords' in item.lower():
+                        brand_path = os.path.join(self.keywords_dir, item)
+                        brand_name = item.replace('_keywords.json', '').replace('.json', '')
+                        self.load_brand_keywords(brand_path, brand_name)
+                            
+            self.extract_global_data()
+                            
+        except Exception as e:
+            pass
+    
+    def load_brand_keywords(self, json_path, brand_name):
+        try:
+            with open(json_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.keywords_cache[brand_name.upper()] = data
+        except Exception as e:
+            pass
+    
+    def extract_global_data(self):
+        """Extract global colors and materials from all brands"""
+        all_colors = set()
+        all_hardwares = set()
+        
+        for brand_data in self.keywords_cache.values():
+            # Check for top-level colors first
+            if 'colors' in brand_data:
+                all_colors.update(brand_data['colors'])
+            
+            if 'hardwares' in brand_data:
+                all_hardwares.update(brand_data['hardwares'])
+            # Navigate through the nested structure: brand -> model -> submodel
+
+        
+        self.global_data = {
+            'colors': sorted(list(all_colors)),
+            'hardwares': sorted(list(all_hardwares))
+        }
+    
+    def get_available_brands(self):
+        return list(self.keywords_cache.keys())
+    
+    def get_brand_data(self, brand):
+        return self.keywords_cache.get(brand.upper(), {})
+    
+    def get_global_colors(self):
+        return self.global_data.get('colors', [])
+    
+    def get_global_materials(self):
+        return self.global_data.get('hardwares', [])
+
+def create_filters(df):
+    """Create filter widgets with dependent dropdowns"""
+    st.subheader("🔍 Filters")
+    
+    # First row: Status filter
+    col_status = st.columns(1)[0]
+    with col_status:
+        status_options = ["All", "✅ Fixed", "❌ Unfixed"]
+        filters = {}
+        filters['status'] = st.selectbox("📊 Status", status_options, key="filter_status")
+    
+    # Second row: Other filters
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        if 'Contract_Numbers' in df.columns:
+            filters['contract'] = st.selectbox("Contract Number", ["All", "Not Empty", "Empty"])
+        else:
+            filters['contract'] = "All"
+    
+    with col2:
+        if 'Types' in df.columns:
+            unique_types = ['All'] + sorted([str(x) for x in df['Types'].dropna().unique() if str(x) != 'nan'])
+            filters['type'] = st.selectbox("Type", unique_types, key="filter_type")
+        else:
+            filters['type'] = "All"
+    
+    with col3:
+        if 'Brands' in df.columns and 'Types' in df.columns:
+            if filters['type'] == "All":
+                unique_brands = ['All'] + sorted([str(x) for x in df['Brands'].dropna().unique() if str(x) != 'nan'])
+            else:
+                type_filtered_df = df[df['Types'].astype(str) == filters['type']]
+                unique_brands = ['All'] + sorted([str(x) for x in type_filtered_df['Brands'].dropna().unique() if str(x) != 'nan'])
+            
+            filters['brand'] = st.selectbox("Brand", unique_brands, key="filter_brand")
+        else:
+            filters['brand'] = "All"
+    
+    with col4:
+        if 'Sub-Models' in df.columns and 'Types' in df.columns and 'Brands' in df.columns:
+            filtered_for_submodel = df.copy()
+            
+            if filters['type'] != "All":
+                filtered_for_submodel = filtered_for_submodel[filtered_for_submodel['Types'].astype(str) == filters['type']]
+            
+            if filters['brand'] != "All":
+                filtered_for_submodel = filtered_for_submodel[filtered_for_submodel['Brands'].astype(str) == filters['brand']]
+            
+            unique_submodels = ['All'] + sorted([str(x) for x in filtered_for_submodel['Sub-Models'].dropna().unique() if str(x) != 'nan'])
+            filters['submodel'] = st.selectbox("Sub-Model", unique_submodels, key="filter_submodel")
+        else:
+            filters['submodel'] = "All"
+    
+    # Show active filters
+    active_filters = []
+    if filters['status'] != "All":
+        active_filters.append(f"Status='{filters['status']}'")
+    if filters['type'] != "All":
+        active_filters.append(f"Type='{filters['type']}'")
+    if filters['brand'] != "All":
+        active_filters.append(f"Brand='{filters['brand']}'")
+    if filters['submodel'] != "All":
+        active_filters.append(f"Sub-Model='{filters['submodel']}'")
+    
+    if active_filters:
+        st.info(f"🔍 Active filters: {', '.join(active_filters)}")
+    
+    return filters
+
+def apply_filters(df, filters):
+    """Apply filters to dataframe"""
+    filtered_df = df.copy()
+    
+    # Status filter
+    if filters.get('status') == "✅ Fixed" and 'Status' in df.columns:
+        filtered_df = filtered_df[filtered_df['Status'] == 1]
+    elif filters.get('status') == "❌ Unfixed" and 'Status' in df.columns:
+        filtered_df = filtered_df[filtered_df['Status'] == 0]
+    
+    # Contract filter
+    if filters.get('contract') == "Not Empty" and 'Contract_Numbers' in df.columns:
+        filtered_df = filtered_df[filtered_df['Contract_Numbers'].notna()]
+    elif filters.get('contract') == "Empty" and 'Contract_Numbers' in df.columns:
+        filtered_df = filtered_df[filtered_df['Contract_Numbers'].isna()]
+    
+    # Other filters
+    if filters.get('type') != "All" and 'Types' in df.columns:
+        filtered_df = filtered_df[filtered_df['Types'].astype(str) == filters['type']]
+    
+    if filters.get('brand') != "All" and 'Brands' in df.columns:
+        filtered_df = filtered_df[filtered_df['Brands'].astype(str) == filters['brand']]
+    
+    if filters.get('submodel') != "All" and 'Sub-Models' in df.columns:
+        filtered_df = filtered_df[filtered_df['Sub-Models'].astype(str) == filters['submodel']]
+    
+    return filtered_df
+
+def create_edit_form(selected_row, keyword_manager, data_manager):
+    """Create edit form with dependent dropdowns"""
+    st.subheader(f"✏️ Editing Record")
+    
+    # Initialize form state
+    if 'form_state' not in st.session_state:
+        st.session_state.form_state = {
+            'brand': selected_row.get('Brands', ''),
+            'model': selected_row.get('Models', ''),
+            'submodel': selected_row.get('Sub-Models', ''),
+            'size': selected_row.get('Sizes', ''),
+            'color': selected_row.get('Colors', ''),
+            'hardware': selected_row.get('Hardwares', ''),
+            'material': selected_row.get('Materials', '')
+        }
+    
+    # Create three columns for better layout
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.subheader("Brand & Model")
+        
+        # Brand dropdown
+        brands = [''] + keyword_manager.get_available_brands()
+        brand_idx = 0
+        if st.session_state.form_state['brand'] in brands:
+            brand_idx = brands.index(st.session_state.form_state['brand'])
+        
+        selected_brand = st.selectbox(
+            "Brand", 
+            brands, 
+            index=brand_idx,
+            key="edit_brand"
+        )
+        
+        if selected_brand != st.session_state.form_state['brand']:
+            st.session_state.form_state['brand'] = selected_brand
+            st.session_state.form_state['model'] = ''
+            st.session_state.form_state['submodel'] = ''
+            st.session_state.form_state['size'] = ''
+            st.session_state.form_state['material'] = ''
+        
+        # Model dropdown
+        models = ['']
+        if selected_brand:
+            brand_data = keyword_manager.get_brand_data(selected_brand)
+            if brand_data:  # If brand data exists, get the top-level keys as models
+                models.extend(list(brand_data.keys()))
+        
+        model_idx = 0
+        if st.session_state.form_state['model'] in models:
+            model_idx = models.index(st.session_state.form_state['model'])
+        
+        selected_model = st.selectbox(
+            "Model", 
+            models, 
+            index=model_idx,
+            key="edit_model"
+        )
+        
+        if selected_model != st.session_state.form_state['model']:
+            st.session_state.form_state['model'] = selected_model
+            st.session_state.form_state['submodel'] = ''
+            st.session_state.form_state['size'] = ''
+            st.session_state.form_state['material'] = ''
+        
+        # Sub-Model dropdown
+        submodels = ['']
+        if selected_brand and selected_model:
+            brand_data = keyword_manager.get_brand_data(selected_brand)
+            if brand_data and selected_model in brand_data:
+                model_data = brand_data[selected_model]
+                if isinstance(model_data, dict):
+                    submodels.extend(list(model_data.keys()))
+        
+        submodel_idx = 0
+        if st.session_state.form_state['submodel'] in submodels:
+            submodel_idx = submodels.index(st.session_state.form_state['submodel'])
+        
+        selected_submodel = st.selectbox(
+            "Sub-Model", 
+            submodels, 
+            index=submodel_idx,
+            key="edit_submodel"
+        )
+        
+        if selected_submodel != st.session_state.form_state['submodel']:
+            st.session_state.form_state['submodel'] = selected_submodel
+            st.session_state.form_state['size'] = ''
+            st.session_state.form_state['material'] = ''
+    
+    with col2:
+        st.subheader("Size & Material")
+        
+        # Size dropdown
+        sizes = ['']
+        if selected_brand and selected_model and selected_submodel:
+            brand_data = keyword_manager.get_brand_data(selected_brand)
+            if (brand_data and 
+                selected_model in brand_data and
+                selected_submodel in brand_data[selected_model]):
+                
+                submodel_data = brand_data[selected_model][selected_submodel]
+                if isinstance(submodel_data, dict) and 'sizes' in submodel_data:
+                    sizes.extend(submodel_data['sizes'])
+        
+        size_idx = 0
+        if st.session_state.form_state['size'] in sizes:
+            size_idx = sizes.index(st.session_state.form_state['size'])
+        
+        selected_size = st.selectbox(
+            "Size", 
+            sizes, 
+            index=size_idx,
+            key="edit_size"
+        )
+        
+        if selected_size != st.session_state.form_state['size']:
+            st.session_state.form_state['size'] = selected_size
+        
+        # Material dropdown
+        materials = ['']
+        if selected_brand and selected_model and selected_submodel:
+            brand_data = keyword_manager.get_brand_data(selected_brand)
+            if (brand_data and 
+                selected_model in brand_data and
+                selected_submodel in brand_data[selected_model]):
+                
+                submodel_data = brand_data[selected_model][selected_submodel]
+                if isinstance(submodel_data, dict) and 'materials' in submodel_data:
+                    materials.extend(submodel_data['materials'])
+        
+        material_idx = 0
+        if st.session_state.form_state['material'] in materials:
+            material_idx = materials.index(st.session_state.form_state['material'])
+        
+        selected_material = st.selectbox(
+            "Material", 
+            materials, 
+            index=material_idx,
+            key="edit_material"
+        )
+        
+        if selected_material != st.session_state.form_state['material']:
+            st.session_state.form_state['material'] = selected_material
+    
+    with col3:
+        st.subheader("Color & Hardware")
+        
+        # Color dropdown (independent)
+        colors = [''] + keyword_manager.get_global_colors()
+        color_idx = 0
+        if st.session_state.form_state['color'] in colors:
+            color_idx = colors.index(st.session_state.form_state['color'])
+        
+        selected_color = st.selectbox(
+            "Color", 
+            colors, 
+            index=color_idx,
+            key="edit_color"
+        )
+        
+        if selected_color != st.session_state.form_state['color']:
+            st.session_state.form_state['color'] = selected_color
+        
+        # Hardware dropdown (independent)
+        materials = [''] + keyword_manager.get_global_materials()
+        hardware_idx = 0
+        if st.session_state.form_state['hardware'] in materials:
+            hardware_idx = materials.index(st.session_state.form_state['hardware'])
+        
+        selected_hardware = st.selectbox(
+            "Hardware", 
+            materials, 
+            index=hardware_idx,
+            key="edit_hardware"
+        )
+        
+        if selected_hardware != st.session_state.form_state['hardware']:
+            st.session_state.form_state['hardware'] = selected_hardware
+    
+    # Update form state
+    st.session_state.form_state.update({
+        'brand': selected_brand,
+        'model': selected_model,
+        'submodel': selected_submodel,
+        'size': selected_size,
+        'color': selected_color,
+        'hardware': selected_hardware,
+        'material': selected_material
+    })
+    
+    # Save button
+    st.markdown("---")
+    col_save, col_cancel = st.columns([1, 1])
+    
+    with col_save:
+        if st.button("💾 Save Changes", type="primary", use_container_width=True):
+            # Prepare updated data
+            updated_data = {
+                'Brands': selected_brand,
+                'Models': selected_model,
+                'Sub-Models': selected_submodel,
+                'Sizes': selected_size,
+                'Colors': selected_color,
+                'Hardwares': selected_hardware,
+                'Materials': selected_material
+            }
+            
+            # Update the record
+            success = data_manager.update_record(selected_row['_index'], updated_data)
+            
+            if success:
+                st.success("✅ Record updated successfully!")
+                st.session_state.selected_row = None
+                st.session_state.show_edit_form = False
+                if 'form_state' in st.session_state:
+                    del st.session_state.form_state
+                st.rerun()
+            else:
+                st.error("❌ Failed to save changes")
+    
+    with col_cancel:
+        if st.button("❌ Cancel", use_container_width=True):
+            st.session_state.selected_row = None
+            st.session_state.show_edit_form = False
+            if 'form_state' in st.session_state:
+                del st.session_state.form_state
+            st.rerun()
+
+# Initialize session state
+if 'data_manager' not in st.session_state:
+    st.session_state.data_manager = DataManager()
+
+if 'keyword_manager' not in st.session_state:
+    st.session_state.keyword_manager = KeywordManager()
+
+if 'selected_row' not in st.session_state:
+    st.session_state.selected_row = None
+
+if 'show_edit_form' not in st.session_state:
+    st.session_state.show_edit_form = False
+
+# Main app
+def main():
+    st.title("Back Office Matching v1.0")
+    
+    # Sidebar
+    with st.sidebar:
+        st.header("📊 Dashboard")
+        stats = st.session_state.data_manager.get_tracking_stats()
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric("Total", stats['total'])
+            st.metric("Fixed", stats['fixed'])
+        with col2:
+            st.metric("Unfixed", stats['unfixed'])
+            if stats['total'] > 0:
+                progress = stats['fixed'] / stats['total']
+                st.metric("Progress", f"{progress:.1%}")
+        
+        if stats['total'] > 0:
+            st.progress(stats['fixed'] / stats['total'])
+        
+        st.markdown("---")
+        
+        # Export controls
+        st.subheader("💾 Data Export")
+        
+        if st.button("📁 Export to Excel", type="primary"):
+            filename = st.session_state.data_manager.export_to_excel()
+            if filename:
+                st.success(f"✅ Exported: {os.path.basename(filename)}")
+            else:
+                st.error("❌ Export failed")
+        
+        # Reset option
+        with st.expander("⚠️ Advanced Options"):
+            if st.button("🔄 Reset All Status", type="secondary"):
+                if st.session_state.data_manager.reset_tracking():
+                    st.success("✅ All records reset to unfixed")
+                    st.rerun()
+                else:
+                    st.error("❌ Reset failed")
+        
+        # System info
+        st.markdown("---")
+        st.caption("🐳 Running in Docker")
+        st.caption(f"📁 Data: {DATA_DIR}")
+        
+        # Keywords info
+        brands = st.session_state.keyword_manager.get_available_brands()
+        if brands:
+            st.caption(f"🏷️ Brands: {len(brands)}")
+        else:
+            st.caption("⚠️ No keyword files loaded")
+    
+    # Main tabs
+    tab1, tab2, tab3 = st.tabs(["📋 Data Management", "✅ Fixed Records", "❌ Unfixed Records"])
+    
+    with tab1:
+        # Load data
+        df = st.session_state.data_manager.load_data()
+        
+        if df is not None:
+            st.success(f"✅ Loaded {len(df)} records successfully!")
+            
+            # Create layout
+            col1, col2 = st.columns([2, 1])
+            
+            with col1:
+                # Filters
+                filters = create_filters(df)
+                filtered_df = apply_filters(df, filters)
+                
+                # Data table
+                st.subheader(f"📋 Data Table ({len(filtered_df)} records)")
+                
+                if not filtered_df.empty:
+                    display_df = filtered_df.copy()
+                    
+                    # Add visual Status column
+                    if 'Status' in display_df.columns:
+                        display_df['Status_Display'] = display_df['Status'].map({
+                            0: '❌ Unfixed',
+                            1: '✅ Fixed'
+                        })
+                        cols = ['Status_Display'] + [col for col in display_df.columns if col not in ['Status_Display', 'Status']]
+                        display_df = display_df[cols]
+                    
+                    display_df_reset = display_df.reset_index(drop=False)
+                    
+                    # Configure columns
+                    column_config = {
+                        "Picture_url": st.column_config.LinkColumn(
+                            "Picture URL",
+                            help="Click to view image",
+                            display_text="View Image"
+                        ) if 'Picture_url' in display_df_reset.columns else None,
+                        "Status_Display": st.column_config.TextColumn(
+                            "Status",
+                            help="Record status",
+                            width="small"
+                        ) if 'Status_Display' in display_df_reset.columns else None,
+                    }
+                    
+                    if 'index' in display_df_reset.columns:
+                        column_config["index"] = None
+                    
+                    # Display dataframe
+                    event = st.dataframe(
+                        display_df_reset,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config=column_config,
+                        on_select="rerun",
+                        selection_mode="single-row"
+                    )
+                    
+                    # Handle row selection
+                    if event.selection.rows:
+                        try:
+                            selected_idx = event.selection.rows[0]
+                            
+                            if 'index' in display_df_reset.columns:
+                                original_idx = display_df_reset.iloc[selected_idx]['index']
+                            else:
+                                original_idx = display_df_reset.iloc[selected_idx].name
+                            
+                            if (st.session_state.selected_row is None or 
+                                st.session_state.selected_row['_index'] != original_idx):
+                                
+                                selected_data = df.loc[original_idx].to_dict()
+                                selected_data['_index'] = original_idx
+                                
+                                st.session_state.selected_row = selected_data
+                                st.session_state.show_edit_form = True
+                                
+                                st.success(f"✅ Selected: Contract {selected_data.get('Contract_Numbers', 'N/A')}")
+                        
+                        except Exception as e:
+                            st.error(f"❌ Error selecting row: {str(e)}")
+                    else:
+                        if st.session_state.selected_row is not None:
+                            st.session_state.selected_row = None
+                            st.session_state.show_edit_form = False
+                    
+                    # Clear selection
+                    if st.session_state.selected_row is not None:
+                        if st.button("🔄 Clear Selection"):
+                            st.session_state.selected_row = None
+                            st.session_state.show_edit_form = False
+                            if 'form_state' in st.session_state:
+                                del st.session_state.form_state
+                            st.rerun()
+                else:
+                    st.info("No records match the current filters.")
+                
+                # Edit form
+                if st.session_state.show_edit_form and st.session_state.selected_row:
+                    st.markdown("---")
+                    create_edit_form(
+                        st.session_state.selected_row,
+                        st.session_state.keyword_manager,
+                        st.session_state.data_manager
+                    )
+            
+            with col2:
+                st.header("🖼️ Image Preview")
+                if st.session_state.selected_row and 'Picture_url' in st.session_state.selected_row:
+                    image_url = st.session_state.selected_row['Picture_url']
+                    if image_url and str(image_url) != 'nan':
+                        try:
+                            st.image(image_url, caption="Product Image", use_container_width=True)
+                        except:
+                            st.error("Could not load image")
+                    else:
+                        st.info("No image URL available")
+                else:
+                    st.info("Select a row to view image")
+        
+        else:
+            st.error("❌ Could not load Excel file")
+            st.info("💡 Ensure your Excel file is mounted in the data directory")
+    
+    with tab2:
+        st.header("✅ Fixed Records")
+        stats = st.session_state.data_manager.get_tracking_stats()
+        
+        if stats['fixed'] > 0:
+            df = st.session_state.data_manager.load_data()
+            if df is not None:
+                fixed_df = df[df['Status'] == 1].copy()
+                
+                st.subheader(f"Total Fixed Records: {len(fixed_df)}")
+                st.dataframe(fixed_df, use_container_width=True)
+                
+                # Download option
+                csv = fixed_df.to_csv(index=False)
+                st.download_button(
+                    label="📥 Download Fixed Records CSV",
+                    data=csv,
+                    file_name="fixed_records.csv",
+                    mime="text/csv"
+                )
+        else:
+            st.info("No records have been fixed yet.")
+    
+    with tab3:
+        st.header("❌ Unfixed Records")
+        stats = st.session_state.data_manager.get_tracking_stats()
+        
+        if stats['unfixed'] > 0:
+            df = st.session_state.data_manager.load_data()
+            if df is not None:
+                unfixed_df = df[df['Status'] == 0].copy()
+                
+                st.subheader(f"Total Unfixed Records: {len(unfixed_df)}")
+                
+                # Pagination
+                page_size = 100
+                total_pages = (len(unfixed_df) + page_size - 1) // page_size
+                
+                if total_pages > 1:
+                    page = st.selectbox("Page", range(1, total_pages + 1))
+                    start_idx = (page - 1) * page_size
+                    end_idx = min(start_idx + page_size, len(unfixed_df))
+                    page_df = unfixed_df.iloc[start_idx:end_idx]
+                    st.info(f"Showing {start_idx + 1} to {end_idx} of {len(unfixed_df)} unfixed records")
+                else:
+                    page_df = unfixed_df
+                
+                st.dataframe(page_df, use_container_width=True)
+        else:
+            st.success("🎉 All records have been fixed!")
+
+if __name__ == "__main__":
+    main()

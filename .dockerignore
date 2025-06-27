@@ -1,0 +1,57 @@
+# Ignore development files
+app_working.py
+app_simple.py
+test_*.py
+check_setup.py
+simple_test.py
+
+# Ignore cache and temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore logs
+*.log
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore git
+.git/
+.gitignore
+
+# Ignore development artifacts
+tracking_data.json
+Customer_Loan_Updated_*.xlsx
+
+# Ignore original components (we have everything in production app)
+components/
+utils/
+
+# Ignore notebooks
+*.ipynb
+KEYWORDS_EXTRACT.ipynb
+
+# Ignore raw keywords
+KEYWORDS_RAW/
+
+# Ignore start scripts for local development
+start_app.bat
+
+# Keep these essential files:
+# - app_production.py (copied as app.py)
+# - requirements_docker.txt (copied as requirements.txt)
+# - Dockerfile
+# - docker-compose.yml
+# - deploy.sh / deploy.bat
+# - README_DOCKER.md
