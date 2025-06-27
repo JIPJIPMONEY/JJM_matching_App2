@@ -712,34 +712,19 @@ def main():
                             # Display the image
                             st.image(
                                 image_url, 
+                                caption=f"Product Image (Row {record_index})", 
                                 use_container_width=True
                             )
+                            
                             
                         except Exception as e:
                             st.error("Could not load image")
                             st.error(f"Error details: {str(e)}")
                             st.write(f"Image URL: {image_url}")
-                            
-                            # Show record info even when image fails
-                            st.markdown("---")
-                            st.markdown("**📝 Record Info:**")
-                            st.write(f"**Contract:** {current_selection.get('Contract_Numbers', 'N/A')}")
-                            st.write(f"**Brand:** {current_selection.get('Brands', 'N/A')}")
-                            st.write(f"**Type:** {current_selection.get('Types', 'N/A')}")
-                            st.write(f"**Model:** {current_selection.get('Models', 'N/A')}")
+
                     else:
                         st.info("No valid image URL available")
                         # Show record info even without image
-                        st.markdown("---")
-                        st.markdown("**📝 Record Info:**")
-                        st.write(f"**Contract:** {current_selection.get('Contract_Numbers', 'N/A')}")
-                        st.write(f"**Brand:** {current_selection.get('Brands', 'N/A')}")
-                        st.write(f"**Type:** {current_selection.get('Types', 'N/A')}")
-                        st.write(f"**Model:** {current_selection.get('Models', 'N/A')}")
-                        
-                        with st.expander("🔍 Debug Info"):
-                            st.write(f"**Row Index:** {record_index}")
-                            st.write(f"**Raw Image URL:** `{repr(image_url)}`")
                 else:
                     st.info("Select a row to view image")
                     if current_selection:
