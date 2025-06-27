@@ -367,8 +367,7 @@ def apply_filters(df, filters):
     return filtered_df
 
 def create_edit_form(selected_row, keyword_manager, data_manager):
-    """Create edit form with dependent dropdowns"""
-    st.subheader(f"✏️ Editing Record")
+    """Create edit form with dependent dropdowns - compact version for right column"""
     
     # Initialize form state
     if 'form_state' not in st.session_state:
@@ -382,170 +381,158 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
             'material': selected_row.get('Materials', '')
         }
     
-    # Create three columns for better layout
-    col1, col2, col3 = st.columns(3)
+    # Brand dropdown
+    brands = [''] + keyword_manager.get_available_brands()
+    brand_idx = 0
+    if st.session_state.form_state['brand'] in brands:
+        brand_idx = brands.index(st.session_state.form_state['brand'])
     
-    with col1:
-        st.subheader("Brand & Model")
-        
-        # Brand dropdown
-        brands = [''] + keyword_manager.get_available_brands()
-        brand_idx = 0
-        if st.session_state.form_state['brand'] in brands:
-            brand_idx = brands.index(st.session_state.form_state['brand'])
-        
-        selected_brand = st.selectbox(
-            "Brand", 
-            brands, 
-            index=brand_idx,
-            key="edit_brand"
-        )
-        
-        if selected_brand != st.session_state.form_state['brand']:
-            st.session_state.form_state['brand'] = selected_brand
-            st.session_state.form_state['model'] = ''
-            st.session_state.form_state['submodel'] = ''
-            st.session_state.form_state['size'] = ''
-            st.session_state.form_state['material'] = ''
-        
-        # Model dropdown
-        models = ['']
-        if selected_brand:
-            brand_data = keyword_manager.get_brand_data(selected_brand)
-            if brand_data:  # If brand data exists, get the top-level keys as models
-                models.extend(list(brand_data.keys()))
-        
-        model_idx = 0
-        if st.session_state.form_state['model'] in models:
-            model_idx = models.index(st.session_state.form_state['model'])
-        
-        selected_model = st.selectbox(
-            "Model", 
-            models, 
-            index=model_idx,
-            key="edit_model"
-        )
-        
-        if selected_model != st.session_state.form_state['model']:
-            st.session_state.form_state['model'] = selected_model
-            st.session_state.form_state['submodel'] = ''
-            st.session_state.form_state['size'] = ''
-            st.session_state.form_state['material'] = ''
-        
-        # Sub-Model dropdown
-        submodels = ['']
-        if selected_brand and selected_model:
-            brand_data = keyword_manager.get_brand_data(selected_brand)
-            if brand_data and selected_model in brand_data:
-                model_data = brand_data[selected_model]
-                if isinstance(model_data, dict):
-                    submodels.extend(list(model_data.keys()))
-        
-        submodel_idx = 0
-        if st.session_state.form_state['submodel'] in submodels:
-            submodel_idx = submodels.index(st.session_state.form_state['submodel'])
-        
-        selected_submodel = st.selectbox(
-            "Sub-Model", 
-            submodels, 
-            index=submodel_idx,
-            key="edit_submodel"
-        )
-        
-        if selected_submodel != st.session_state.form_state['submodel']:
-            st.session_state.form_state['submodel'] = selected_submodel
-            st.session_state.form_state['size'] = ''
-            st.session_state.form_state['material'] = ''
+    selected_brand = st.selectbox(
+        "Brand", 
+        brands, 
+        index=brand_idx,
+        key="edit_brand"
+    )
     
-    with col2:
-        st.subheader("Size & Material")
-        
-        # Size dropdown
-        sizes = ['']
-        if selected_brand and selected_model and selected_submodel:
-            brand_data = keyword_manager.get_brand_data(selected_brand)
-            if (brand_data and 
-                selected_model in brand_data and
-                selected_submodel in brand_data[selected_model]):
-                
-                submodel_data = brand_data[selected_model][selected_submodel]
-                if isinstance(submodel_data, dict) and 'sizes' in submodel_data:
-                    sizes.extend(submodel_data['sizes'])
-        
-        size_idx = 0
-        if st.session_state.form_state['size'] in sizes:
-            size_idx = sizes.index(st.session_state.form_state['size'])
-        
-        selected_size = st.selectbox(
-            "Size", 
-            sizes, 
-            index=size_idx,
-            key="edit_size"
-        )
-        
-        if selected_size != st.session_state.form_state['size']:
-            st.session_state.form_state['size'] = selected_size
-        
-        # Material dropdown
-        materials = ['']
-        if selected_brand and selected_model and selected_submodel:
-            brand_data = keyword_manager.get_brand_data(selected_brand)
-            if (brand_data and 
-                selected_model in brand_data and
-                selected_submodel in brand_data[selected_model]):
-                
-                submodel_data = brand_data[selected_model][selected_submodel]
-                if isinstance(submodel_data, dict) and 'materials' in submodel_data:
-                    materials.extend(submodel_data['materials'])
-        
-        material_idx = 0
-        if st.session_state.form_state['material'] in materials:
-            material_idx = materials.index(st.session_state.form_state['material'])
-        
-        selected_material = st.selectbox(
-            "Material", 
-            materials, 
-            index=material_idx,
-            key="edit_material"
-        )
-        
-        if selected_material != st.session_state.form_state['material']:
-            st.session_state.form_state['material'] = selected_material
+    if selected_brand != st.session_state.form_state['brand']:
+        st.session_state.form_state['brand'] = selected_brand
+        st.session_state.form_state['model'] = ''
+        st.session_state.form_state['submodel'] = ''
+        st.session_state.form_state['size'] = ''
+        st.session_state.form_state['material'] = ''
     
-    with col3:
-        st.subheader("Color & Hardware")
-        
-        # Color dropdown (independent)
-        colors = [''] + keyword_manager.get_global_colors()
-        color_idx = 0
-        if st.session_state.form_state['color'] in colors:
-            color_idx = colors.index(st.session_state.form_state['color'])
-        
-        selected_color = st.selectbox(
-            "Color", 
-            colors, 
-            index=color_idx,
-            key="edit_color"
-        )
-        
-        if selected_color != st.session_state.form_state['color']:
-            st.session_state.form_state['color'] = selected_color
-        
-        # Hardware dropdown (independent)
-        materials = [''] + keyword_manager.get_global_materials()
-        hardware_idx = 0
-        if st.session_state.form_state['hardware'] in materials:
-            hardware_idx = materials.index(st.session_state.form_state['hardware'])
-        
-        selected_hardware = st.selectbox(
-            "Hardware", 
-            materials, 
-            index=hardware_idx,
-            key="edit_hardware"
-        )
-        
-        if selected_hardware != st.session_state.form_state['hardware']:
-            st.session_state.form_state['hardware'] = selected_hardware
+    # Model dropdown
+    models = ['']
+    if selected_brand:
+        brand_data = keyword_manager.get_brand_data(selected_brand)
+        if brand_data:
+            models.extend(list(brand_data.keys()))
+    
+    model_idx = 0
+    if st.session_state.form_state['model'] in models:
+        model_idx = models.index(st.session_state.form_state['model'])
+    
+    selected_model = st.selectbox(
+        "Model", 
+        models, 
+        index=model_idx,
+        key="edit_model"
+    )
+    
+    if selected_model != st.session_state.form_state['model']:
+        st.session_state.form_state['model'] = selected_model
+        st.session_state.form_state['submodel'] = ''
+        st.session_state.form_state['size'] = ''
+        st.session_state.form_state['material'] = ''
+    
+    # Sub-Model dropdown
+    submodels = ['']
+    if selected_brand and selected_model:
+        brand_data = keyword_manager.get_brand_data(selected_brand)
+        if brand_data and selected_model in brand_data:
+            model_data = brand_data[selected_model]
+            if isinstance(model_data, dict):
+                submodels.extend(list(model_data.keys()))
+    
+    submodel_idx = 0
+    if st.session_state.form_state['submodel'] in submodels:
+        submodel_idx = submodels.index(st.session_state.form_state['submodel'])
+    
+    selected_submodel = st.selectbox(
+        "Sub-Model", 
+        submodels, 
+        index=submodel_idx,
+        key="edit_submodel"
+    )
+    
+    if selected_submodel != st.session_state.form_state['submodel']:
+        st.session_state.form_state['submodel'] = selected_submodel
+        st.session_state.form_state['size'] = ''
+        st.session_state.form_state['material'] = ''
+    
+    # Size dropdown
+    sizes = ['']
+    if selected_brand and selected_model and selected_submodel:
+        brand_data = keyword_manager.get_brand_data(selected_brand)
+        if (brand_data and 
+            selected_model in brand_data and
+            selected_submodel in brand_data[selected_model]):
+            
+            submodel_data = brand_data[selected_model][selected_submodel]
+            if isinstance(submodel_data, dict) and 'sizes' in submodel_data:
+                sizes.extend(submodel_data['sizes'])
+    
+    size_idx = 0
+    if st.session_state.form_state['size'] in sizes:
+        size_idx = sizes.index(st.session_state.form_state['size'])
+    
+    selected_size = st.selectbox(
+        "Size", 
+        sizes, 
+        index=size_idx,
+        key="edit_size"
+    )
+    
+    if selected_size != st.session_state.form_state['size']:
+        st.session_state.form_state['size'] = selected_size
+    
+    # Material dropdown
+    materials = ['']
+    if selected_brand and selected_model and selected_submodel:
+        brand_data = keyword_manager.get_brand_data(selected_brand)
+        if (brand_data and 
+            selected_model in brand_data and
+            selected_submodel in brand_data[selected_model]):
+            
+            submodel_data = brand_data[selected_model][selected_submodel]
+            if isinstance(submodel_data, dict) and 'materials' in submodel_data:
+                materials.extend(submodel_data['materials'])
+    
+    material_idx = 0
+    if st.session_state.form_state['material'] in materials:
+        material_idx = materials.index(st.session_state.form_state['material'])
+    
+    selected_material = st.selectbox(
+        "Material", 
+        materials, 
+        index=material_idx,
+        key="edit_material"
+    )
+    
+    if selected_material != st.session_state.form_state['material']:
+        st.session_state.form_state['material'] = selected_material
+    
+    # Color dropdown
+    colors = [''] + keyword_manager.get_global_colors()
+    color_idx = 0
+    if st.session_state.form_state['color'] in colors:
+        color_idx = colors.index(st.session_state.form_state['color'])
+    
+    selected_color = st.selectbox(
+        "Color", 
+        colors, 
+        index=color_idx,
+        key="edit_color"
+    )
+    
+    if selected_color != st.session_state.form_state['color']:
+        st.session_state.form_state['color'] = selected_color
+    
+    # Hardware dropdown
+    hardwares = [''] + keyword_manager.get_global_materials()
+    hardware_idx = 0
+    if st.session_state.form_state['hardware'] in hardwares:
+        hardware_idx = hardwares.index(st.session_state.form_state['hardware'])
+    
+    selected_hardware = st.selectbox(
+        "Hardware", 
+        hardwares, 
+        index=hardware_idx,
+        key="edit_hardware"
+    )
+    
+    if selected_hardware != st.session_state.form_state['hardware']:
+        st.session_state.form_state['hardware'] = selected_hardware
     
     # Update form state
     st.session_state.form_state.update({
@@ -558,47 +545,43 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         'material': selected_material
     })
     
-    # Action buttons
-    st.markdown("---")
-    col_save, col_delete, col_cancel = st.columns([1, 1, 1])
+    # Action buttons - stacked vertically for narrow column
+    #st.markdown("---")
     
-    with col_save:
-        if st.button("💾 Save Changes", type="primary", use_container_width=True):
-            # Prepare updated data
-            updated_data = {
-                'Brands': selected_brand,
-                'Models': selected_model,
-                'Sub-Models': selected_submodel,
-                'Sizes': selected_size,
-                'Colors': selected_color,
-                'Hardwares': selected_hardware,
-                'Materials': selected_material
-            }
-            
-            # Update the record
-            success = data_manager.update_record(selected_row['_index'], updated_data)
-            
-            if success:
-                st.success("✅ Record updated successfully!")
-                st.session_state.selected_row = None
-                st.session_state.show_edit_form = False
-                if 'form_state' in st.session_state:
-                    del st.session_state.form_state
-                st.rerun()
-            else:
-                st.error("❌ Failed to save changes")
-    
-    with col_delete:
-        if st.button("🗑️ Delete Record", type="secondary", use_container_width=True):
-            st.session_state.show_delete_popup = True
-    
-    with col_cancel:
-        if st.button("❌ Cancel", use_container_width=True):
+    if st.button("💾 Save Changes", type="primary", use_container_width=True):
+        # Prepare updated data
+        updated_data = {
+            'Brands': selected_brand,
+            'Models': selected_model,
+            'Sub-Models': selected_submodel,
+            'Sizes': selected_size,
+            'Colors': selected_color,
+            'Hardwares': selected_hardware,
+            'Materials': selected_material
+        }
+        
+        # Update the record
+        success = data_manager.update_record(selected_row['_index'], updated_data)
+        
+        if success:
+            st.success("✅ Record updated successfully!")
             st.session_state.selected_row = None
             st.session_state.show_edit_form = False
             if 'form_state' in st.session_state:
                 del st.session_state.form_state
             st.rerun()
+        else:
+            st.error("❌ Failed to save changes")
+    
+    if st.button("🗑️ Delete Record", type="secondary", use_container_width=True):
+        st.session_state.show_delete_popup = True
+    
+    if st.button("❌ Cancel", use_container_width=True):
+        st.session_state.selected_row = None
+        st.session_state.show_edit_form = False
+        if 'form_state' in st.session_state:
+            del st.session_state.form_state
+        st.rerun()
     
     # Delete confirmation popup
     if st.session_state.get('show_delete_popup', False):
@@ -710,10 +693,61 @@ def main():
         if df is not None:
             st.success(f"✅ Loaded {len(df)} records successfully!")
             
-            # Create layout
-            col1, col2 = st.columns([2, 1])
+            # Create three-column layout: Image Preview | Data Management | Edit Form
+            col1, col2, col3 = st.columns([1, 2, 1])
             
+            # Left Column: Image Preview
             with col1:
+                st.header("🖼️ Image Preview")
+                
+                # Get current selection data
+                current_selection = st.session_state.get('selected_row', None)
+                
+                if current_selection and 'Picture_url' in current_selection:
+                    image_url = current_selection['Picture_url']
+                    record_index = current_selection.get('_index', 'Unknown')
+                    
+                    if image_url and str(image_url) != 'nan' and str(image_url).strip():
+                        try:
+                            # Display the image
+                            st.image(
+                                image_url, 
+                                use_container_width=True
+                            )
+                            
+                        except Exception as e:
+                            st.error("Could not load image")
+                            st.error(f"Error details: {str(e)}")
+                            st.write(f"Image URL: {image_url}")
+                            
+                            # Show record info even when image fails
+                            st.markdown("---")
+                            st.markdown("**📝 Record Info:**")
+                            st.write(f"**Contract:** {current_selection.get('Contract_Numbers', 'N/A')}")
+                            st.write(f"**Brand:** {current_selection.get('Brands', 'N/A')}")
+                            st.write(f"**Type:** {current_selection.get('Types', 'N/A')}")
+                            st.write(f"**Model:** {current_selection.get('Models', 'N/A')}")
+                    else:
+                        st.info("No valid image URL available")
+                        # Show record info even without image
+                        st.markdown("---")
+                        st.markdown("**📝 Record Info:**")
+                        st.write(f"**Contract:** {current_selection.get('Contract_Numbers', 'N/A')}")
+                        st.write(f"**Brand:** {current_selection.get('Brands', 'N/A')}")
+                        st.write(f"**Type:** {current_selection.get('Types', 'N/A')}")
+                        st.write(f"**Model:** {current_selection.get('Models', 'N/A')}")
+                        
+                        with st.expander("🔍 Debug Info"):
+                            st.write(f"**Row Index:** {record_index}")
+                            st.write(f"**Raw Image URL:** `{repr(image_url)}`")
+                else:
+                    st.info("Select a row to view image")
+                    if current_selection:
+                        st.write(f"Debug: Selected row exists but missing Picture_url field")
+                        st.write(f"Available fields: {list(current_selection.keys())}")
+            
+            # Middle Column: Filters and Data Table
+            with col2:
                 # Filters
                 filters = create_filters(df)
                 filtered_df = apply_filters(df, filters)
@@ -759,7 +793,8 @@ def main():
                         hide_index=True,
                         column_config=column_config,
                         on_select="rerun",
-                        selection_mode="single-row"
+                        selection_mode="single-row",
+                        height=400  # Fixed height to save space
                     )
                     
                     # Handle row selection
@@ -767,32 +802,47 @@ def main():
                         try:
                             selected_idx = event.selection.rows[0]
                             
+                            # Get the original index from the filtered dataframe
                             if 'index' in display_df_reset.columns:
                                 original_idx = display_df_reset.iloc[selected_idx]['index']
                             else:
-                                original_idx = display_df_reset.iloc[selected_idx].name
+                                # If no 'index' column, get from the filtered_df original index
+                                original_idx = filtered_df.iloc[selected_idx].name
                             
-                            if (st.session_state.selected_row is None or 
-                                st.session_state.selected_row['_index'] != original_idx):
-                                
+                            # Always update if selection changed or no selection exists
+                            current_selected_row = st.session_state.get('selected_row', None)
+                            current_selection = current_selected_row.get('_index', None) if current_selected_row else None
+                            
+                            if current_selection != original_idx:
                                 selected_data = df.loc[original_idx].to_dict()
                                 selected_data['_index'] = original_idx
                                 
                                 st.session_state.selected_row = selected_data
                                 st.session_state.show_edit_form = True
                                 
-                                st.success(f"✅ Selected: Contract {selected_data.get('Contract_Numbers', 'N/A')}")
+                                # Clear form state when switching records
+                                if 'form_state' in st.session_state:
+                                    del st.session_state.form_state
+                                
+                                st.success(f"✅ Selected: Contract {selected_data.get('Contract_Numbers', 'N/A')} | Index: {original_idx}")
+                                
+                                # Force rerun to update image display
+                                st.rerun()
                         
                         except Exception as e:
                             st.error(f"❌ Error selecting row: {str(e)}")
+                            st.error(f"Debug info - Selected idx: {selected_idx}, Available rows: {len(display_df_reset)}")
                     else:
-                        if st.session_state.selected_row is not None:
+                        # Clear selection when no rows are selected
+                        if st.session_state.get('selected_row') is not None:
                             st.session_state.selected_row = None
                             st.session_state.show_edit_form = False
+                            if 'form_state' in st.session_state:
+                                del st.session_state.form_state
                     
-                    # Clear selection
+                    # Clear selection button
                     if st.session_state.selected_row is not None:
-                        if st.button("🔄 Clear Selection"):
+                        if st.button("🔄 Clear Selection", use_container_width=True):
                             st.session_state.selected_row = None
                             st.session_state.show_edit_form = False
                             if 'form_state' in st.session_state:
@@ -800,29 +850,18 @@ def main():
                             st.rerun()
                 else:
                     st.info("No records match the current filters.")
-                
-                # Edit form
+            
+            # Right Column: Edit Form
+            with col3:
+                st.subheader("✏️ Edit Record")
                 if st.session_state.show_edit_form and st.session_state.selected_row:
-                    st.markdown("---")
                     create_edit_form(
                         st.session_state.selected_row,
                         st.session_state.keyword_manager,
                         st.session_state.data_manager
                     )
-            
-            with col2:
-                st.header("🖼️ Image Preview")
-                if st.session_state.selected_row and 'Picture_url' in st.session_state.selected_row:
-                    image_url = st.session_state.selected_row['Picture_url']
-                    if image_url and str(image_url) != 'nan':
-                        try:
-                            st.image(image_url, caption="Product Image", use_container_width=True)
-                        except:
-                            st.error("Could not load image")
-                    else:
-                        st.info("No image URL available")
-                else:
-                    st.info("Select a row to view image")
+                #else:
+                    #st.info("Select a record to edit")
         
         else:
             st.error("❌ Could not load Excel file")
