@@ -116,6 +116,37 @@ class DataManager:
             return True
         return False
     
+    def delete_record(self, index):
+        """Delete a record from the dataframe"""
+        if self.data_cache is not None and index in self.data_cache.index:
+            try:
+                # Remove from tracking sets
+                if index in self.fixed_records:
+                    self.fixed_records.remove(index)
+                if index in self.unfixed_records:
+                    self.unfixed_records.remove(index)
+                
+                # Remove from modified data if exists
+                if index in self.modified_data:
+                    del self.modified_data[index]
+                
+                # Drop the record from dataframe
+                self.data_cache = self.data_cache.drop(index)
+                
+                # Reset index to avoid gaps
+                self.data_cache = self.data_cache.reset_index(drop=True)
+                
+                # Update tracking sets with new indices
+                self.load_tracking_from_status()
+                
+                # Save to Excel file immediately
+                self.save_to_excel()
+                
+                return True
+            except Exception as e:
+                return False
+        return False
+    
     def get_tracking_stats(self):
         return {
             'total': len(self.data_cache) if self.data_cache is not None else 0,
@@ -527,9 +558,9 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         'material': selected_material
     })
     
-    # Save button
+    # Action buttons
     st.markdown("---")
-    col_save, col_cancel = st.columns([1, 1])
+    col_save, col_delete, col_cancel = st.columns([1, 1, 1])
     
     with col_save:
         if st.button("💾 Save Changes", type="primary", use_container_width=True):
@@ -557,6 +588,10 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
             else:
                 st.error("❌ Failed to save changes")
     
+    with col_delete:
+        if st.button("🗑️ Delete Record", type="secondary", use_container_width=True):
+            st.session_state.show_delete_popup = True
+    
     with col_cancel:
         if st.button("❌ Cancel", use_container_width=True):
             st.session_state.selected_row = None
@@ -564,6 +599,35 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
             if 'form_state' in st.session_state:
                 del st.session_state.form_state
             st.rerun()
+    
+    # Delete confirmation popup
+    if st.session_state.get('show_delete_popup', False):
+        @st.dialog("Delete Record")
+        def delete_confirmation():
+            st.error("⚠️ Are you sure you want to delete this record?")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("🗑️ Yes, Delete", type="primary", use_container_width=True, key="confirm_delete_btn"):
+                    success = data_manager.delete_record(selected_row['_index'])
+                    
+                    if success:
+                        st.session_state.selected_row = None
+                        st.session_state.show_edit_form = False
+                        st.session_state.show_delete_popup = False
+                        if 'form_state' in st.session_state:
+                            del st.session_state.form_state
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to delete record")
+            
+            with col2:
+                if st.button("❌ Cancel", use_container_width=True, key="cancel_delete_btn"):
+                    st.session_state.show_delete_popup = False
+                    st.rerun()
+        
+        delete_confirmation()
 
 # Initialize session state
 if 'data_manager' not in st.session_state:
@@ -577,6 +641,9 @@ if 'selected_row' not in st.session_state:
 
 if 'show_edit_form' not in st.session_state:
     st.session_state.show_edit_form = False
+
+if 'show_delete_popup' not in st.session_state:
+    st.session_state.show_delete_popup = False
 
 # Main app
 def main():
