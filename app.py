@@ -680,7 +680,7 @@ if 'edit_from_fixed' not in st.session_state:
 
 # Main app
 def main():
-    st.title("Back Office Matching v1.0")
+    st.title("Back Office Matching v1.3")
     
     # Sidebar
     with st.sidebar:
