@@ -13,7 +13,7 @@ from PIL import Image
 
 # Configure page
 st.set_page_config(
-    page_title="Back office matching v1.1",
+    page_title="Back office matching v1.3",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -146,6 +146,51 @@ class DataManager:
             except Exception as e:
                 return False
         return False
+    
+    def unfix_record(self, index):
+        """Change a record status from fixed back to unfixed"""
+        if self.data_cache is not None and index in self.data_cache.index:
+            try:
+                # Update tracking in memory
+                if index in self.fixed_records:
+                    self.fixed_records.remove(index)
+                self.unfixed_records.add(index)
+                
+                # Update Status column in the dataframe
+                self.data_cache.loc[index, 'Status'] = 0
+                
+                # Save to Excel file immediately
+                self.save_to_excel()
+                
+                return True
+            except Exception as e:
+                return False
+        return False
+    
+    def bulk_unfix_records(self, indices):
+        """Change multiple records status from fixed back to unfixed"""
+        if self.data_cache is not None:
+            try:
+                success_count = 0
+                for index in indices:
+                    if index in self.data_cache.index:
+                        # Update tracking in memory
+                        if index in self.fixed_records:
+                            self.fixed_records.remove(index)
+                        self.unfixed_records.add(index)
+                        
+                        # Update Status column in the dataframe
+                        self.data_cache.loc[index, 'Status'] = 0
+                        success_count += 1
+                
+                # Save to Excel file once
+                if success_count > 0:
+                    self.save_to_excel()
+                
+                return success_count
+            except Exception as e:
+                return 0
+        return 0
     
     def get_tracking_stats(self):
         return {
@@ -567,6 +612,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
             st.success("✅ Record updated successfully!")
             st.session_state.selected_row = None
             st.session_state.show_edit_form = False
+            st.session_state.edit_from_fixed = False  # Clear the flag
             if 'form_state' in st.session_state:
                 del st.session_state.form_state
             st.rerun()
@@ -579,6 +625,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
     if st.button("❌ Cancel", use_container_width=True):
         st.session_state.selected_row = None
         st.session_state.show_edit_form = False
+        st.session_state.edit_from_fixed = False  # Clear the flag
         if 'form_state' in st.session_state:
             del st.session_state.form_state
         st.rerun()
@@ -627,6 +674,9 @@ if 'show_edit_form' not in st.session_state:
 
 if 'show_delete_popup' not in st.session_state:
     st.session_state.show_delete_popup = False
+
+if 'edit_from_fixed' not in st.session_state:
+    st.session_state.edit_from_fixed = False
 
 # Main app
 def main():
@@ -838,15 +888,19 @@ def main():
             
             # Right Column: Edit Form
             with col3:
-                st.subheader("✏️ Edit Record")
+                # Check if editing from Fixed Records tab
+                if st.session_state.get('edit_from_fixed', False):
+                    st.warning("⚠️ **Editing Fixed Record** - This record was previously marked as complete")
+                
+                st.header("✏️ Edit Record")
                 if st.session_state.show_edit_form and st.session_state.selected_row:
                     create_edit_form(
                         st.session_state.selected_row,
                         st.session_state.keyword_manager,
                         st.session_state.data_manager
                     )
-                #else:
-                    #st.info("Select a record to edit")
+                else:
+                    st.info("Select a record to edit")
         
         else:
             st.error("❌ Could not load Excel file")
@@ -862,16 +916,55 @@ def main():
                 fixed_df = df[df['Status'] == 1].copy()
                 
                 st.subheader(f"Total Fixed Records: {len(fixed_df)}")
-                st.dataframe(fixed_df, use_container_width=True)
                 
-                # Download option
-                csv = fixed_df.to_csv(index=False)
-                st.download_button(
-                    label="📥 Download Fixed Records CSV",
-                    data=csv,
-                    file_name="fixed_records.csv",
-                    mime="text/csv"
+                # Display interactive dataframe for fixed records
+                display_fixed_df = fixed_df.copy()
+                display_fixed_df_reset = display_fixed_df.reset_index(drop=False)
+                
+                # Configure columns
+                column_config = {
+                    "Picture_url": st.column_config.LinkColumn(
+                        "Picture URL",
+                        help="Click to view image",
+                        display_text="View Image"
+                    ) if 'Picture_url' in display_fixed_df_reset.columns else None,
+                }
+                
+                if 'index' in display_fixed_df_reset.columns:
+                    column_config["index"] = None
+                
+                # Interactive dataframe for fixed records
+                fixed_event = st.dataframe(
+                    display_fixed_df_reset,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config=column_config,
+                    on_select="rerun",
+                    selection_mode="multi-row"
                 )
+                
+                # Handle selection for fixed records
+                if fixed_event.selection.rows:
+                    selected_indices = []
+                    for selected_idx in fixed_event.selection.rows:
+                        if 'index' in display_fixed_df_reset.columns:
+                            original_idx = display_fixed_df_reset.iloc[selected_idx]['index']
+                        else:
+                            original_idx = fixed_df.iloc[selected_idx].name
+                        selected_indices.append(original_idx)
+                    
+                    st.info(f"✅ Selected {len(selected_indices)} fixed record(s)")
+                    
+                    # Only Unfix Selected button
+                    if st.button("🔄 Unfix Selected", type="primary", use_container_width=True):
+                        success_count = st.session_state.data_manager.bulk_unfix_records(selected_indices)
+                        if success_count > 0:
+                            st.success(f"✅ {success_count} record(s) moved back to unfixed!")
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to unfix records")
+                else:
+                    st.info("Select one or more records to unfix them")
         else:
             st.info("No records have been fixed yet.")
     
