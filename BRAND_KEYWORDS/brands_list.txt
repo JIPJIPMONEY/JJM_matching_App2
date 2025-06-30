@@ -6,6 +6,6 @@
 # 1. Brand/filename: CHANEL/chanel_keywords.json
 # 2. Just filename: chanel_keywords.json (will search in subdirectories)
 
-CHANEL/chanel_keywords.json
-LOUIS_VUITTON/louis_vuitton_keywords.json
+CHANEL/Chanel_keywords.json
+LOUIS VUITTON/Louis_Vuitton_keywords.json
 

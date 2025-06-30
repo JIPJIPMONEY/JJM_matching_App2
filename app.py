@@ -14,7 +14,7 @@ from PIL import Image
 
 # Configure page
 st.set_page_config(
-    page_title="Back office matching v1.3",
+    page_title="Back office matching v1.4",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -283,23 +283,30 @@ class KeywordManager:
             pass
     
     def extract_global_data(self):
-        """Extract global colors and materials from all brands"""
+        """Extract colors and materials organized by brand and globally"""
         all_colors = set()
         all_hardwares = set()
+        brand_colors = {}
+        brand_hardwares = {}
         
-        for brand_data in self.keywords_cache.values():
-            # Check for top-level colors first
+        for brand_name, brand_data in self.keywords_cache.items():
+            brand_colors[brand_name] = set()
+            brand_hardwares[brand_name] = set()
+            
+            # Check for top-level colors and hardwares
             if 'colors' in brand_data:
+                brand_colors[brand_name].update(brand_data['colors'])
                 all_colors.update(brand_data['colors'])
             
             if 'hardwares' in brand_data:
+                brand_hardwares[brand_name].update(brand_data['hardwares'])
                 all_hardwares.update(brand_data['hardwares'])
-            # Navigate through the nested structure: brand -> model -> submodel
-
         
         self.global_data = {
             'colors': sorted(list(all_colors)),
-            'hardwares': sorted(list(all_hardwares))
+            'hardwares': sorted(list(all_hardwares)),
+            'brand_colors': {brand: sorted(list(colors)) for brand, colors in brand_colors.items()},
+            'brand_hardwares': {brand: sorted(list(hardwares)) for brand, hardwares in brand_hardwares.items()}
         }
     
     def get_available_brands(self):
@@ -313,6 +320,18 @@ class KeywordManager:
     
     def get_global_materials(self):
         return self.global_data.get('hardwares', [])
+    
+    def get_brand_colors(self, brand):
+        """Get colors specific to a brand"""
+        if brand:
+            return self.global_data.get('brand_colors', {}).get(brand.upper(), [])
+        return self.get_global_colors()
+    
+    def get_brand_hardwares(self, brand):
+        """Get hardwares specific to a brand"""
+        if brand:
+            return self.global_data.get('brand_hardwares', {}).get(brand.upper(), [])
+        return self.get_global_materials()
 
 def create_filters(df):
     """Create filter widgets with dependent dropdowns"""
@@ -418,6 +437,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
     # Initialize form state
     if 'form_state' not in st.session_state:
         st.session_state.form_state = {
+            'type': selected_row.get('Types', ''),
             'brand': selected_row.get('Brands', ''),
             'model': selected_row.get('Models', ''),
             'submodel': selected_row.get('Sub-Models', ''),
@@ -426,6 +446,22 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
             'hardware': selected_row.get('Hardwares', ''),
             'material': selected_row.get('Materials', '')
         }
+    
+    # Types dropdown - add this first
+    types_options = ['', 'Bag', 'Jewelry', 'Watch']
+    type_idx = 0
+    if st.session_state.form_state['type'] in types_options:
+        type_idx = types_options.index(st.session_state.form_state['type'])
+    
+    selected_type = st.selectbox(
+        "Type",
+        types_options,
+        index=type_idx,
+        key="edit_type"
+    )
+    
+    if selected_type != st.session_state.form_state['type']:
+        st.session_state.form_state['type'] = selected_type
     
     # Brand dropdown
     brands = [''] + keyword_manager.get_available_brands()
@@ -452,7 +488,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
     if selected_brand:
         brand_data = keyword_manager.get_brand_data(selected_brand)
         if brand_data:
-            models.extend(list(brand_data.keys()))
+            models.extend([key for key in brand_data.keys() if key not in ['colors', 'hardwares']])
     
     model_idx = 0
     if st.session_state.form_state['model'] in models:
@@ -549,7 +585,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         st.session_state.form_state['material'] = selected_material
     
     # Color dropdown
-    colors = [''] + keyword_manager.get_global_colors()
+    colors = [''] + keyword_manager.get_brand_colors(selected_brand)
     color_idx = 0
     if st.session_state.form_state['color'] in colors:
         color_idx = colors.index(st.session_state.form_state['color'])
@@ -565,7 +601,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         st.session_state.form_state['color'] = selected_color
     
     # Hardware dropdown
-    hardwares = [''] + keyword_manager.get_global_materials()
+    hardwares = [''] + keyword_manager.get_brand_hardwares(selected_brand)
     hardware_idx = 0
     if st.session_state.form_state['hardware'] in hardwares:
         hardware_idx = hardwares.index(st.session_state.form_state['hardware'])
@@ -582,6 +618,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
     
     # Update form state
     st.session_state.form_state.update({
+        'type': selected_type,
         'brand': selected_brand,
         'model': selected_model,
         'submodel': selected_submodel,
@@ -597,6 +634,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
     if st.button("💾 Save Changes", type="primary", use_container_width=True):
         # Prepare updated data
         updated_data = {
+            'Types': selected_type,
             'Brands': selected_brand,
             'Models': selected_model,
             'Sub-Models': selected_submodel,

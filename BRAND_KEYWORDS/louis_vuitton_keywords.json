@@ -1,1710 +1,2466 @@
 {
-    "Classic": {
-        "Classic": {
+    "Coussin": {
+        "Coussin": {
             "sizes": [
-                "Jumbo 12 In",
-                "Maxi 13 In",
-                "Medium 10 In",
-                "Mini 8 In",
-                "Mini Sac 7 In",
-                "Mini Square 7 In",
-                "Small 9 In",
-                "Travel Bag 17 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "BB",
+                "East West",
+                "MM",
+                "PM"
             ],
             "materials": [
-                "Calfskin",
+                "Lambskin"
+            ]
+        },
+        "Pochette Coussin": {
+            "sizes": [
+                "20"
+            ],
+            "materials": [
+                "Lambskin"
+            ]
+        }
+    },
+    "Keepall": {
+        "Keepall": {
+            "sizes": [
+                "25",
+                "35",
+                "45",
+                "50",
+                "55"
+            ],
+            "materials": [
                 "Canvas",
-                "Caviar",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Lizard",
-                "Ostrich Skin",
-                "Patent",
-                "Python",
-                "Satin",
-                "Sequins",
-                "Strass",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
             ]
-        }
-    },
-    "19": {
-        "19": {
+        },
+        "Keepall Bandouliere": {
             "sizes": [
-                "Maxi 36",
-                "Medium 30",
-                "Small 26"
+                "25",
+                "35",
+                "45",
+                "50",
+                "55"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Cotton/Canvas",
-                "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Sequins",
-                "Shearling Sheepskin",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Reissue": {
-        "Reissue": {
-            "sizes": [
-                "224",
-                "225",
-                "226",
-                "227",
-                "228"
-            ],
-            "materials": [
-                "Calfskin",
                 "Canvas",
-                "Caviar",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Lizard",
-                "Patent",
-                "Python",
-                "Satin",
-                "Sequins",
-                "Sheepskin",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
             ]
-        }
-    },
-    "Boy": {
-        "Boy": {
+        },
+        "Keepall Sport": {
             "sizes": [
-                "Large 12 In",
-                "Medium 10 In",
-                "Medium 11 In",
-                "Mini 6 In",
-                "Small 8 In"
+                "45"
             ],
             "materials": [
-                "Calfskin",
                 "Canvas",
-                "Caviar",
-                "Crocodile",
-                "Crystals",
-                "Denim",
-                "Goatskin",
-                "Lizard",
-                "Patent",
-                "Python",
-                "Rabbit Fur",
-                "Satin",
-                "Stingray",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Gabrielle": {
-        "Gabrielle": {
-            "sizes": [
-                "Large 12 In",
-                "Maxi 13.25 In",
-                "Medium 11 In",
-                "Small 8 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Patent",
-                "Python",
-                "Sequins",
-                "Shearling Sheepskin",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "22": {
-        "22": {
-            "sizes": [
-                "Large 19 In",
-                "Medium 16 In",
-                "Mini 8 In",
-                "Small 13 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Sequins",
-                "Shearling Suede",
-                "Sheepskin",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "COCO": {
-        "COCO": {
-            "sizes": [
-                "Large 12.5 In",
-                "Medium 11.5 In",
-                "Mini 7.5 In",
-                "Small 10.5 In",
-                "Small 9.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Caviar / Lizard Handle",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lamb / Lizard Handle",
-                "Lambskin \u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "Lizard",
-                "Patent",
-                "Python",
-                "Tweed",
-                "Velvet"
-            ]
-        }
-    },
-    "WOC": {
-        "WOC": {
-            "sizes": [
-                "7.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Camellia Flower",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Lizard",
-                "Patent",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "nan": {
-        "Reissue WOC": {
-            "sizes": [
-                "7.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
             ]
         },
-        "19 WOC": {
-            "sizes": [
-                "7.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Denim",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Boy WOC": {
-            "sizes": [
-                "7.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Patent",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Cambon WOC": {
-            "sizes": [
-                "7.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Trendy CC WOC": {
-            "sizes": [
-                "7.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Vanity With Metal Handle": {
-            "sizes": [
-                "Mini 11",
-                "Small 16",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Vanity Case": {
-            "sizes": [
-                "Extra Large 30",
-                "Large 25",
-                "Medium 20",
-                "Small 15",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "PVC",
-                "Patent",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Vanity With Chain": {
-            "sizes": [
-                "Small 8.5 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Deauville Bowling": {
+        "City Keepall": {
             "sizes": [
                 "27"
             ],
             "materials": [
                 "Canvas",
-                "Carviar",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
             ]
         },
-        "23": {
+        "Trail Keepall": {
             "sizes": [
-                "Large 12 In",
-                "Maxi 13 In",
-                "Medium 11 In",
-                "Small 8 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "55"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Belt Bag": {
+        "Discovery Bumbag": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Rush": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Denim",
+                "Leather"
+            ]
+        },
+        "High Rise": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Catch": {
+            "sizes": [
+                "20"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Bumbag": {
+            "sizes": [
+                "Mini",
+                "Regular"
+            ],
+            "materials": [
+                "Canvas",
+                "Denim",
+                "Leather"
+            ]
+        }
+    },
+    "Dauphine": {
+        "Dauphine Wallet": {
+            "sizes": [
+                "Chain Wallet",
+                "Compact Wallet"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Dauphine": {
+            "sizes": [
+                "Backpack",
+                "East-West",
+                "Hobo",
+                "MM",
+                "Mini"
             ],
             "materials": [
                 "Calfskin",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas",
+                "Epi",
+                "Leather"
             ]
-        },
-        "22": {
+        }
+    },
+    "Pochette": {
+        "Pochette Accessoires": {
             "sizes": [
-                "Large 12 In",
-                "Maxi 13 In",
-                "Medium 11 In",
-                "Small 8 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Mini"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         },
-        "21": {
+        "Multi Pochette Accessoires": {
             "sizes": [
-                "Large 12 In",
-                "Maxi 13 In",
-                "Medium 11 In",
-                "Small 8 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "24"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas",
+                "Leather"
             ]
         },
-        "Hobo": {
+        "Hills Pochette": {
             "sizes": [
-                "Large 12 In",
-                "Maxi 13 In",
-                "Medium 11 In",
-                "Small 8 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "18.5"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Python",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas",
+                "Denim"
             ]
         },
-        "Timeless Clutch": {
+        "Pochette Camille": {
+            "sizes": [
+                "20.5"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Pochette Tirette": {
+            "sizes": [
+                "22"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Trunk": {
+        "Side Trunk": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Soft Trunk": {
+            "sizes": [
+                "21.5",
+                "40",
+                "Mini"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Slim Trunk": {
+            "sizes": [
+                "23"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "Croisette": {
+        "Croisette": {
+            "sizes": [
+                "24"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Twist": {
+        "Twist": {
+            "sizes": [
+                "MM",
+                "PM",
+                "Twist Little"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Twist West Pochette": {
+            "sizes": [
+                "19"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Twist One Handle": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        }
+    },
+    "Wallet": {
+        "Wallet Slender": {
             "sizes": [
                 "11"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Patent",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Clutch With Chain": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "Tweed",
-                "Velved",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Reissue Clutch": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Flap Bag With Adjustable Chain": {
-            "sizes": [
-                "7 In",
-                "7.5 In",
-                "8 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
                 "Canvas",
-                "Caviar",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Lizard",
-                "Ostrich Skin",
-                "Patent",
-                "Python",
-                "Satin",
-                "Sequins",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Epi",
+                "Leather"
             ]
         },
-        "Backpack": {
+        "Wallet Multiple": {
             "sizes": [
-                "Small 16.5 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "PVC",
-                "Shearling Sheep",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Backpack 22": {
-            "sizes": [
-                "Large 15.5 In",
-                "Regular 13.5 In",
-                "Small 13 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Grafity Backpack": {
-            "sizes": [
-                "Large 15.5 In",
-                "Medium 13.5 In"
+                "11.5"
             ],
             "materials": [
                 "Canvas",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Epi",
+                "Leather"
             ]
         },
-        "Gabrielle Backpack": {
+        "Wallet Emilie": {
             "sizes": [
-                "Medium 10.5 In",
-                "Small 8.8 In"
+                "19"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "19 Backpack": {
-            "sizes": [
-                "Large 11 In",
-                "Medium 9.5 In",
-                "Small 8.3 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Duma Backpack": {
-            "sizes": [
-                "Medium 8 In",
-                "Small 6.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Shearling Sheep",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Urban Spirit Backpack": {
-            "sizes": [
-                "Large 9.5 In",
-                "Mini 7 In",
-                "Small 8.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Drawstring Backpack": {
-            "sizes": [
-                "Medium 9 In",
-                "Small 7 In"
-            ],
-            "materials": [
-                "Calf Skin",
                 "Canvas",
-                "Lambskin",
-                "Pleted",
-                "Printed Fabric",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Epi",
+                "Leather"
             ]
         },
-        "Classic Tri-fold Wallet": {
+        "Wallet Sarah": {
             "sizes": [
-                "4.5 In",
-                "7.5 In"
+                "19"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas",
+                "Epi",
+                "Leather"
             ]
         },
-        "Card Holder": {
+        "Wallet Brazza": {
             "sizes": [
-                "3 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "10"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas",
+                "Epi",
+                "Leather"
             ]
         },
-        "Zippy": {
+        "Wallet Zippy": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "17"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas",
+                "Epi",
+                "Leather"
             ]
         },
-        "Coin Purse": {
+        "Wallet Clemence": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "20"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas",
+                "Leather"
             ]
         },
-        "Boy Wallet Bi-fold": {
+        "Key Pouch": {
             "sizes": [
-                "8.6 In"
+                "12"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas",
+                "Epi",
+                "Leather"
             ]
         },
-        "Boy Wallet Tri-fold": {
+        "Capucines Tiny": {
             "sizes": [
-                "5 In"
+                "10.7"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
             ]
         },
-        "Reissue Wallet": {
+        "Nano Alpha": {
             "sizes": [
-                "4 In",
-                "7 In"
+                "18.5"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Victorine": {
+            "sizes": [
+                "12"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        }
+    },
+    "S-Lock": {
+        "S-Lock Messenger": {
+            "sizes": [
+                "22"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "S-Lock Slingbag": {
+            "sizes": [
+                "14.5"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "S-Lock Vertical Wearable Wallet": {
+            "sizes": [
+                "12"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "S-Lock Briefcase": {
+            "sizes": [
+                "39"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Pico S-Lock": {
+            "sizes": [
+                "12.5"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "S-Lock Pouch": {
+            "sizes": [
+                "21"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Leather"
+            ]
+        }
+    },
+    "Hobo": {
+        "Sunset Vibe": {
+            "sizes": [
+                "27"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Sunset": {
+            "sizes": [
+                "27"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Loop": {
+            "sizes": [
+                "23"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Loop Hobo": {
+            "sizes": [
+                "38"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Looping": {
+            "sizes": [
+                "28"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Sistina": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Alma": {
+        "Alma": {
+            "sizes": [
+                "BB",
+                "GM",
+                "MM",
+                "Nano",
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Leather",
+                "vernis"
+            ]
+        }
+    },
+    "Chapeau": {
+        "Chapeau": {
+            "sizes": [
+                "MM",
+                "Mini",
+                "PM",
+                "Petite"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        }
+    },
+    "Cannes": {
+        "Cannes": {
+            "sizes": [
+                "Cannes(Regular)",
+                "Nano"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Leather"
+            ]
+        }
+    },
+    "Capucines": {
+        "Capucines": {
+            "sizes": [
+                "BB",
+                "MM",
+                "Mini",
+                "Nano"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "Felicie Pochette": {
+        "Felicie Pochette": {
+            "sizes": [
+                "21"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        }
+    },
+    "Ivy": {
+        "Ivy": {
+            "sizes": [
+                "23.5"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Noe": {
+        "Noe": {
+            "sizes": [
+                "BB",
+                "Micro",
+                "Mini",
+                "Noe(Regular)",
+                "Petite"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Leather"
+            ]
+        },
+        "Neonoe": {
+            "sizes": [
+                "BB",
+                "MM",
+                "Nano"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Leather"
+            ]
+        },
+        "Noe Trunk": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Tote": {
+        "Sac Plat": {
+            "sizes": [
+                "BB",
+                "Petite",
+                "Sac Plat(Regular)"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Palais": {
+            "sizes": [
+                "Grand",
+                "Petite"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Montaigne": {
+            "sizes": [
+                "BB",
+                "GM",
+                "MM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "On My Side": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Neverfull": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": []
+        },
+        "Neverfull Bandouli\u00e8re Inside Out": {
+            "sizes": [
+                "BB",
+                "GM",
+                "MM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "On The Go": {
+            "sizes": [
+                "BB",
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Leather"
+            ]
+        },
+        "Belmont": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Greenwich": {
+            "sizes": [
+                "GM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Siena": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Shopper": {
+            "sizes": [
+                "MM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Very": {
+            "sizes": [
+                "GM",
+                "MM"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Palermo": {
+            "sizes": [
+                "GM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Rivoli": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Lockit": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "All In": {
+            "sizes": [
+                "BB",
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Berkeley": {
+            "sizes": [
+                "MM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Cabas": {
+            "sizes": [
+                "Alto",
+                "Mezzo",
+                "Piano"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Citadine": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Hampstead": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Georges": {
+            "sizes": [
+                "BB",
+                "GM",
+                "MM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather",
+                "vernis"
+            ]
+        },
+        "Majestueux": {
+            "sizes": [
+                "MM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Manhattan": {
+            "sizes": [
+                "GM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Grenelle": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Multipli": {
+            "sizes": [
+                "38"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Olympe": {
+            "sizes": [
+                "37"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Pallas": {
+            "sizes": [
+                "BB",
+                "MM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Passy": {
+            "sizes": [
+                "GM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi"
+            ]
+        },
+        "Tivoli": {
+            "sizes": [
+                "GM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Totally": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Turenne": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Venus": {
+            "sizes": [
+                "33"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Lussac": {
+            "sizes": [
+                "37"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Pont Neuf": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Epi",
+                "Leather"
+            ]
+        },
+        "Babylone": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "Metis": {
+        "Pochette Metis": {
+            "sizes": [
+                "25"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Micro Metis": {
+            "sizes": [
+                "Micro"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "East West": {
+            "sizes": [
+                "21.5"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Speedy": {
+        "Speedy": {
+            "sizes": [
+                "20",
+                "25",
+                "30",
+                "35",
+                "40",
+                "50",
+                "Mini"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Speedy Dating": {
+        "Speedy Dating": {
+            "sizes": [
+                "Nano"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Speedy Bandouliere": {
+        "Speedy Bandouliere": {
+            "sizes": [
+                "18",
+                "20",
+                "25",
+                "30",
+                "35",
+                "40",
+                "50",
+                "Nano"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        }
+    },
+    "Speedy P9 Bandouliere": {
+        "Speedy P9 Bandouliere": {
+            "sizes": [
+                "25",
+                "30",
+                "40",
+                "50"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        }
+    },
+    "Speedy Trunk": {
+        "Speedy Trunk": {
+            "sizes": [
+                "20"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        }
+    },
+    "Speedy Soft": {
+        "Speedy Soft": {
+            "sizes": [
+                "30"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        }
+    },
+    "Speedy Cargo": {
+        "Speedy Cargo Vibe": {
+            "sizes": [
+                "28"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "Messenger": {
+        "Trio": {
+            "sizes": [
+                "25"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Discovery": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Abbesses": {
+            "sizes": [
+                "37"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Roman": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Taiga"
+            ]
+        },
+        "District": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Brooklyn": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Trunk": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Voyager": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Takeoff": {
+            "sizes": [
+                "PM",
+                "Takeoff (Regular)"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Omaha": {
+            "sizes": [
+                "40"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Utah Omaha": {
+            "sizes": [
+                "38"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Volta": {
+            "sizes": [
+                "29"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "Vanity": {
+        "Vanity": {
+            "sizes": [
+                "Chain Pouch",
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Nice": {
+            "sizes": [
+                "BB",
+                "Mini",
+                "Nano"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Petite Malle": {
+        "Petite Malle": {
+            "sizes": [
+                "20"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Leather"
+            ]
+        }
+    },
+    "Cluny": {
+        "Cluny": {
+            "sizes": [
+                "BB",
+                "MM",
+                "Mini"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi"
+            ]
+        }
+    },
+    "Lockme": {
+        "Lockme": {
+            "sizes": [
+                "MM",
+                "Mini",
+                "PM"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "MyLockMe": {
+        "MyLockMe": {
+            "sizes": [
+                "Pochette"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "Trevi": {
+        "Trevi": {
+            "sizes": [
+                "GM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Suitcase": {
+        "Horizon Business": {
+            "sizes": [
+                "55"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Horizon": {
+            "sizes": [
+                "50",
+                "55",
+                "70"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Leather"
+            ]
+        },
+        "Rolling Trunk": {
+            "sizes": [
+                "55"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Trunk": {
+            "sizes": [
+                "55",
+                "60",
+                "65",
+                "75",
+                "80"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Trunk Courrier Lozine": {
+            "sizes": [
+                "110",
+                "Carre Droite"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Pegase": {
+            "sizes": [
+                "45",
+                "50",
+                "55",
+                "60",
+                "65",
+                "70"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Backpack": {
+        "Discovery": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Christopher": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Palm Springs": {
+            "sizes": [
+                "MM",
+                "Mini",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Mabillon": {
+            "sizes": [
+                "MM"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Tiny": {
+            "sizes": [
+                "19"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Montsouris": {
+            "sizes": [
+                "GM",
+                "MM",
+                "Mini",
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Teddy": {
+            "sizes": [
+                "Nano"
+            ],
+            "materials": [
+                "Lambskin"
+            ]
+        },
+        "Michael": {
+            "sizes": [
+                "28"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Venice": {
+            "sizes": [
+                "24"
+            ],
+            "materials": [
+                "Canvas",
+                "Denim"
+            ]
+        },
+        "Clapton": {
+            "sizes": [
+                "20"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Takeoff": {
+            "sizes": [
+                "30"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Getaway": {
+            "sizes": [
+                "29"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Coussin": {
+            "sizes": [
+                "Mini",
+                "PM"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Avenue": {
+            "sizes": [
+                "40"
+            ],
+            "materials": [
+                "Taiga"
+            ]
+        }
+    },
+    "Clutch": {
+        "Pochette Voyage": {
+            "sizes": [
+                "MM",
+                "Souple"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Taiga"
+            ]
+        },
+        "Shopper Clutch": {
+            "sizes": [
+                "22.5"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Clutch Box": {
+            "sizes": [
+                "24"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Pallas Wallet": {
+            "sizes": [
+                "22"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Card Holder": {
+        "Enveloppe Carte de visite": {
+            "sizes": [
+                "10.5"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi",
+                "Taiga"
+            ]
+        },
+        "Romy": {
+            "sizes": [
+                "12"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Charms": {
+            "sizes": [
+                "10.2"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Kirigami": {
+            "sizes": [
+                "11"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Double": {
+            "sizes": [
+                "11"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Business Card Holder": {
+            "sizes": [
+                "10.5"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Recto Verso": {
+            "sizes": [
+                "11"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Passport": {
+            "sizes": [
+                "10"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        }
+    },
+    "Coin Wallet": {
+        "Rosalie": {
+            "sizes": [
+                "11"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Coin Zippy": {
+            "sizes": [
+                "11"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather",
+                "Vernis"
+            ]
+        },
+        "Coin Card Holder": {
+            "sizes": [
+                "14.5"
+            ],
+            "materials": [
+                "Coin Card Holder"
+            ]
+        },
+        "Bone": {
+            "sizes": [
+                "14.8"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Coin Shell": {
+            "sizes": [
+                "9.4"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "Rare": {
+        "\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e42\u0e1b\u0e23\u0e14\u0e23\u0e30\u0e1a\u0e38": {
+            "sizes": [
+                "\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e42\u0e1b\u0e23\u0e14\u0e23\u0e30\u0e1a\u0e38"
+            ],
+            "materials": [
+                "\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e42\u0e1b\u0e23\u0e14\u0e23\u0e30\u0e1a\u0e38"
+            ]
+        }
+    },
+    "Limited Edition": {
+        "\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e42\u0e1b\u0e23\u0e14\u0e23\u0e30\u0e1a\u0e38": {
+            "sizes": [
+                "\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e42\u0e1b\u0e23\u0e14\u0e23\u0e30\u0e1a\u0e38"
+            ],
+            "materials": [
+                "\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e42\u0e1b\u0e23\u0e14\u0e23\u0e30\u0e1a\u0e38"
+            ]
+        }
+    },
+    "Vintage": {
+        "\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e42\u0e1b\u0e23\u0e14\u0e23\u0e30\u0e1a\u0e38": {
+            "sizes": [
+                "\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e42\u0e1b\u0e23\u0e14\u0e23\u0e30\u0e1a\u0e38"
+            ],
+            "materials": [
+                "\u0e2d\u0e37\u0e48\u0e19\u0e46 \u0e42\u0e1b\u0e23\u0e14\u0e23\u0e30\u0e1a\u0e38"
+            ]
+        }
+    },
+    "Sling bag": {
+        "Geronimos": {
+            "sizes": [
+                "21"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Avenue": {
+            "sizes": [
+                "NM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Duo": {
+            "sizes": [
+                "42"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Outdoor": {
+            "sizes": [
+                "21"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Nigo Amazon": {
+            "sizes": [
+                "18"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Takeoff": {
+            "sizes": [
+                "30"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "Shoulder bag": {
+        "Diane": {
+            "sizes": [
+                "24",
+                "Nano"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Rivington": {
+            "sizes": [
+                "GM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Phone Pouch": {
+            "sizes": [
+                "17.5"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Batignolles Horizontal": {
+            "sizes": [
+                "37"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Hina": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Mahina"
+            ]
+        },
+        "Favorite": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Tivoli": {
+            "sizes": [
+                "GM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Marelle": {
+            "sizes": [
+                "25"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Marellini": {
+            "sizes": [
+                "19"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Marceau": {
+            "sizes": [
+                "24.5"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Ribera": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Passy": {
+            "sizes": [
+                "GM",
+                "MM",
+                "NM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Epi"
+            ]
+        },
+        "Delightful": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Artsy": {
+            "sizes": [
+                "GM",
+                "MM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Scala": {
+            "sizes": [
+                "Mini"
+            ],
+            "materials": [
+                "Mahina"
+            ]
+        },
+        "Easy Pouch On Strap": {
+            "sizes": [
+                "19"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Camera Box": {
+            "sizes": [
+                "12.5",
+                "17.5"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Gaston": {
+            "sizes": [
+                "22"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Knightsbridge": {
+            "sizes": [
+                "25"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Normandy": {
+            "sizes": [
+                "32"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Spencer": {
+            "sizes": [
+                "GM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "New Wave": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
             ],
             "materials": [
                 "Calfskin"
             ]
         },
-        "19 Long Wallet": {
+        "Portobello": {
             "sizes": [
-                "8 In"
+                "26"
             ],
             "materials": [
-                "Calfskin",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         },
-        "Cambon Yen Wallet": {
+        "Ponthieu": {
             "sizes": [
-                "7 In"
+                "MM",
+                "PM"
             ],
             "materials": [
-                "Calfskin",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
             ]
         },
-        "Flap Bag & Star Coin Purse": {
+        "Reverie": {
             "sizes": [
-                "12",
+                "27"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Surene": {
+            "sizes": [
+                "BB",
+                "MM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Swing": {
+            "sizes": [
+                "24"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Twice": {
+            "sizes": [
+                "23"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Victoire": {
+            "sizes": [
+                "26"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Toiletry": {
+            "sizes": [
                 "15",
-                "16",
+                "19",
+                "26",
+                "GM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Bond Street": {
+            "sizes": [
+                "BB",
+                "MM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Sologne": {
+            "sizes": [
+                "28"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Sablon": {
+            "sizes": [
+                "26"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Sac Coeur": {
+            "sizes": [
+                "22"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Bergamo": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Coffee cup": {
+            "sizes": [
+                "14"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Chelsea": {
+            "sizes": [
+                "42"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Crossbody": {
+        "Buci": {
+            "sizes": [
+                "24.5"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Saumur": {
+            "sizes": [
+                "BB"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Boulogne": {
+            "sizes": [
+                "29"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Brea": {
+            "sizes": [
+                "BB",
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Epi",
+                "vernis"
+            ]
+        },
+        "Pont 9 soft": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Locky": {
+            "sizes": [
+                "BB"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Utility": {
+            "sizes": [
                 "18"
             ],
             "materials": [
-                "Calfskin",
-                "Lambskin"
+                "Canvas"
             ]
         },
-        "Heart Arm Coin Purse": {
+        "Saint placide": {
             "sizes": [
-                "3.5 In"
+                "25"
             ],
             "materials": [
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         },
-        "Heart Belt Bag": {
+        "Tamobourin": {
             "sizes": [
-                "Medium 4.7 In",
-                "Small 3.1 In"
+                "17"
             ],
             "materials": [
-                "Denim",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         },
-        "Heart Necklace Bag": {
+        "Vavin": {
             "sizes": [
-                "Mini 3.9 In"
-            ],
-            "materials": [
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Reissue Chevron Bag": {
-            "sizes": [
-                "224",
-                "225",
-                "226",
-                "227",
-                "228"
-            ],
-            "materials": [
-                "Calfskin",
-                "Canvas",
-                "Caviar",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Lizard",
-                "Patent",
-                "Python",
-                "Satin",
-                "Sequins",
-                "Sheepskin",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Gabrielle Chevron Bag": {
-            "sizes": [
-                "Large 12 In",
-                "Maxi 13.25 In",
-                "Medium 11 In",
-                "Small 8 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Patent",
-                "Python",
-                "Sequins",
-                "Shearling Sheepskin",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "COCO Chevron Bag": {
-            "sizes": [
-                "Large 12.5 In",
-                "Medium 11.5 In",
-                "Mini 7.5 In",
-                "Small 10.5 In",
-                "Small 9 In"
-            ],
-            "materials": [
-                "Alligator",
-                "Calfskin",
-                "Caviar",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lizard",
-                "Patent",
-                "Python",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Boy Chevron Bag": {
-            "sizes": [
-                "Large 12 In",
-                "Medium 10 In",
-                "Medium 11 In",
-                "Mini 6 In",
-                "Small 8 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Canvas",
-                "Caviar",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lizard",
-                "Patent",
-                "Python",
-                "Satin",
-                "Stingray",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "WOC Chevron Bag": {
-            "sizes": [
-                "Regular"
-            ],
-            "materials": [
-                "Calfskin",
-                "Camellia Flower",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Lizard",
-                "Patent",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Reissue WOC Chevron Bag": {
-            "sizes": [
-                "Regular"
-            ],
-            "materials": [
-                "Calfskin",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Boy WOC Chevron Bag": {
-            "sizes": [
-                "Regular"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Patent",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "O-case Chevron Bag": {
-            "sizes": [
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Clutch Chevron Bag": {
-            "sizes": [
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Deauville Chevron Bag": {
-            "sizes": [
-                "Extra Large 51",
-                "Large 44",
-                "Medium 39",
-                "Small 34"
-            ],
-            "materials": [
-                "Denim",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Vanity Chevron Bag": {
-            "sizes": [
-                "Large 24",
-                "Medium 21",
-                "Small 17"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Patent",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Camera Case Chevron Bag": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Bowling Chevron Bag": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Wallet Chevron Bag": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Backpack Chevron": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Gabrielle Backpack Chevron": {
-            "sizes": [
-                "Medium 10.5 In",
-                "Small 8.8 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Flap Chevron": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38\u0e04\u0e27\u0e32\u0e21\u0e01\u0e27\u0e49\u0e32\u0e07\u0e02\u0e2d\u0e07\u0e01\u0e49\u0e19\u0e01\u0e23\u0e30\u0e40\u0e1b\u0e4b\u0e32\u0e42\u0e14\u0e22\u0e23\u0e30\u0e1a\u0e38\u0e40\u0e1b\u0e47\u0e19...cm"
-            ],
-            "materials": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Tote Chevron": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38\u0e04\u0e27\u0e32\u0e21\u0e01\u0e27\u0e49\u0e32\u0e07\u0e02\u0e2d\u0e07\u0e01\u0e49\u0e19\u0e01\u0e23\u0e30\u0e40\u0e1b\u0e4b\u0e32\u0e42\u0e14\u0e22\u0e23\u0e30\u0e1a\u0e38\u0e40\u0e1b\u0e47\u0e19...cm"
-            ],
-            "materials": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Trendy Chevron": {
-            "sizes": [
-                "Medium 30",
-                "Mini 20",
-                "Small 25"
-            ],
-            "materials": [
-                "Denim",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Bucket Chevron": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Kelly": {
-            "sizes": [
-                "14",
-                "25",
-                "30",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Lambskin"
-            ]
-        },
-        "Kelly Charm Set": {
-            "sizes": [
-                "14",
-                "25",
-                "30",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Lambskin"
-            ]
-        },
-        "Cambon Ligne": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Diana": {
-            "sizes": [
-                "Jumbo 12 In",
-                "Medium 10 In",
-                "Small 9 In"
-            ],
-            "materials": [
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Medallion": {
-            "sizes": [
-                "12.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Patent",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Vanity": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "BB",
+                "PM"
             ],
             "materials": [
                 "Canvas",
-                "Caviar",
-                "Lambskin",
-                "Patent",
-                "Velvet"
+                "Leather"
             ]
         },
-        "Vintage": {
+        "Cargo": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Trocadero": {
+            "sizes": [
+                "20"
             ],
             "materials": [
                 "Canvas",
-                "Caviar",
-                "Lambskin",
-                "Patent",
-                "Plexiglass",
-                "Suede",
-                "Velvet"
+                "Leather"
             ]
         },
-        "Metier D'art Bag": {
+        "Paname set": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
+                "14"
             ],
             "materials": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         },
-        "Matryoshka Doll Bag": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Resin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Lego Clutch": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Plexiglass",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Perfume Bottle Bag": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Plexiglass",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Rocket Bag": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Plexiglass",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Minivan": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Resin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Trolley Minaudi\u00e8re": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Plexiglass",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        },
-        "Trendy CC Bowling Bag": {
-            "sizes": [
-                "Medium 26",
-                "Small 20"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Phone Holder": {
-        "Phone Holder": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Vanity": {
-        "Vanity With Handle": {
-            "sizes": [
-                "Mini 11",
-                "Small 16",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Patent",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Deauville": {
         "Deauville": {
             "sizes": [
-                "Extra Large 51",
-                "Large 44",
-                "Medium 39",
-                "Small 34"
+                "35"
             ],
             "materials": [
-                "Calfskin",
-                "Canvas Fabric",
-                "Caviar",
-                "Denim",
-                "Raffia",
-                "Shearling",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
-        }
-    },
-    "Bowling": {
-        "Bowling": {
+        },
+        "Steamer": {
             "sizes": [
-                "Large 14.5 In",
-                "Maxi 18 In",
-                "Medium 14 In",
-                "Mini 9 In",
-                "Small 12 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "18",
+                "30"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Fabric",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "HOBO": {
-        "25": {
-            "sizes": [
-                "Large 12 In",
-                "Maxi 13 In",
-                "Medium 11 In",
-                "Small 8 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Clutch": {
-        "Clutch Bag": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
                 "Canvas",
-                "Caviar",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Lizard",
-                "Ostrich Skin",
-                "Patent",
-                "Python",
-                "Satin",
-                "Sequins",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
             ]
-        }
-    },
-    "Flap Bag": {
-        "Flap Bag": {
+        },
+        "Madeleine": {
             "sizes": [
-                "7 In",
-                "7.5 In",
-                "8 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "BB",
+                "MM",
+                "Nano"
             ],
             "materials": [
-                "Calfskin",
+                "Leather"
+            ]
+        },
+        "Envelope Pouch": {
+            "sizes": [
+                "12.5"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Brooklyn": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Grenelle": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Epi"
+            ]
+        },
+        "Vivacte": {
+            "sizes": [
+                "GM",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Venice": {
+            "sizes": [
+                "20"
+            ],
+            "materials": [
                 "Canvas",
-                "Caviar",
-                "Crocodile",
                 "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Lizard",
-                "Ostrich Skin",
-                "Patent",
-                "Python",
-                "Satin",
-                "Sequins",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Vernis"
             ]
-        }
-    },
-    "Shoulder Bag": {
-        "Shoulder Bag": {
+        },
+        "Chalk Pouch": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
+                "12"
             ],
             "materials": [
-                "Calfskin",
+                "Leather"
+            ]
+        },
+        "Baladeur": {
+            "sizes": [
+                "19"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Music Player": {
+            "sizes": [
+                "10.5"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Pulse": {
+            "sizes": [
+                "26.6"
+            ],
+            "materials": [
                 "Canvas",
-                "Caviar",
-                "Crocodile",
-                "Denim",
-                "Goatskin",
-                "Lambskin",
-                "Lizard",
-                "Ostrich Skin",
-                "Patent",
-                "Python",
-                "Satin",
-                "Sequins",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
+            ]
+        },
+        "Soccer Ball": {
+            "sizes": [
+                "19"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Binoculars": {
+            "sizes": [
+                "19"
+            ],
+            "materials": [
+                "Canvas"
             ]
         }
     },
-    "Belt Bag": {
-        "Belt Bag": {
+    "GO-14": {
+        "GO-14": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "MM",
+                "PM"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Lambskin"
             ]
         }
     },
-    "Waist Bag": {
-        "Waist Bag": {
+    "GO-15": {
+        "Pico GO-14": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "15"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Lambskin"
+            ]
+        }
+    },
+    "Evasion": {
+        "Evasion": {
+            "sizes": [
+                "GM",
+                "MM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Carry All": {
+        "Carry All": {
+            "sizes": [
+                "BB",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas",
+                "Leather"
+            ]
+        },
+        "Carry All Vibe": {
+            "sizes": [],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Carry All Cargo Vibe": {
+            "sizes": [
+                "BB",
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        }
+    },
+    "Bucket": {
+        "Duffle": {
+            "sizes": [
+                "20"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Neo purse": {
+            "sizes": [
+                "BB"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        }
+    },
+    "Ellipse": {
+        "Ellipse": {
+            "sizes": [
+                "MM",
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
             ]
         }
     },
     "Briefcase": {
-        "Briefcase": {
+        "S Lock Briefcase": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "39"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
+            ]
+        },
+        "Altona": {
+            "sizes": [
+                "PM"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Sirius": {
+            "sizes": [
+                "45",
+                "50",
+                "55",
+                "60",
+                "70"
+            ],
+            "materials": [
+                "Canvas"
+            ]
+        },
+        "Takeoff": {
+            "sizes": [
+                "39"
+            ],
+            "materials": [
+                "Leather"
+            ]
+        },
+        "Marron Fonce": {
+            "sizes": [
+                "40.5"
+            ],
+            "materials": [
+                "Canvas"
             ]
         }
     },
-    "Backpack": {
-        "Classic Backpack": {
+    "Lipstick Case": {
+        "Lipstick Case": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "3.6"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "GST": {
-        "Grand Shopping Tote (GST)": {
-            "sizes": [
-                "14 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "PST": {
-        "Petite Shopping (PST)": {
-            "sizes": [
-                "10 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "PTT": {
-        "Petite Timeless Tote (PTT)": {
-            "sizes": [
-                "9.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Hula Hoop": {
-        "Hula Hoop": {
-            "sizes": [
-                "Large 35 In",
-                "Medium 12 In",
-                "Small 10 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Drawstring": {
-        "Drawstring": {
-            "sizes": [
-                "Mini 7.5 In",
-                "Regular 9 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Pleated",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Wallet": {
-        "Classic Bi-fold Wallet": {
-            "sizes": [
-                "4 In",
-                "7.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Easy": {
-        "Easy": {
-            "sizes": [
-                "Jumbo 13 In",
-                "Medium 12 In",
-                "Small 10 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Star": {
-        "Star": {
-            "sizes": [
-                "8 In"
-            ],
-            "materials": [
-                "Lambskin"
-            ]
-        }
-    },
-    "Heart Bag": {
-        "Heart Bag": {
-            "sizes": [
-                "Large 7 In",
-                "Mini 4",
-                "Small 5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "Patent",
-                "Tweed",
-                "Velved",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "O-case": {
-        "O-case Bag": {
-            "sizes": [
-                "Large 13.7 In",
-                "Medium 10.7 In",
-                "Mini 5.9 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Camera Bag": {
-        "Camera Bag": {
-            "sizes": [
-                "Large 10.5 In",
-                "Medium 9.5 In",
-                "Small 8 In",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ],
-            "materials": [
-                "Calfskin",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "Tote Bag": {
-        "Tote Bag": {
-            "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38\u0e04\u0e27\u0e32\u0e21\u0e01\u0e27\u0e49\u0e32\u0e07\u0e02\u0e2d\u0e07\u0e01\u0e49\u0e19\u0e01\u0e23\u0e30\u0e40\u0e1b\u0e4b\u0e32\u0e42\u0e14\u0e22\u0e23\u0e30\u0e1a\u0e38\u0e40\u0e1b\u0e47\u0e19...cm"
-            ],
-            "materials": [
-                "Calfskin",
                 "Canvas",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "Sequins",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
             ]
         }
     },
-    "Chevron": {
-        "Classic Chevron Bag": {
+    "Biker": {
+        "Biker": {
             "sizes": [
-                "Jumbo 12 In",
-                "Maxi 13 In",
-                "Medium10 In",
-                "Mini Rectangle 8 In",
-                "Mini Square 7 In",
-                "Small 9 In"
+                "MM",
+                "Nano",
+                "PM"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Goatskin",
-                "Lambskin",
-                "Patent",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Leather"
             ]
         }
     },
-    "Vintage": {
-        "Classic": {
+    "Jewelry case": {
+        "Trunk": {
             "sizes": [
-                "Jumbo 12 In",
-                "Maxi 13 In",
-                "Medium10 In",
-                "Small 9 In"
+                "22"
             ],
             "materials": [
-                "Calfskin",
-                "Canvas",
-                "Caviar",
-                "Denim",
-                "Goatskin",
-                "Jersey",
-                "Lambskin",
-                "Patent",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         }
     },
-    "Rare Pirce": {
-        "Rare Pirce": {
+    "Paint can": {
+        "Paint can": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
+                "13.5"
             ],
             "materials": [
-                "Calfskin",
-                "Canvas",
-                "Caviar",
-                "Crocodile",
-                "Denim",
-                "Lambskin",
-                "Lizard",
-                "Ostrich Skin",
-                "Patent",
-                "Python",
-                "Satin",
-                "Sequins",
-                "Tweed",
-                "Velvet",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         }
     },
-    "Chain Around": {
-        "Chain Around": {
+    "Phone Box": {
+        "Phone Box": {
             "sizes": [
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38",
-                "\u0e44\u0e21\u0e48\u0e23\u0e30\u0e1a\u0e38"
+                "10"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         }
     },
-    "Half-moon": {
-        "Half-moon": {
+    "Bowling": {
+        "Retiro": {
             "sizes": [
-                "Large10 In",
-                "Medium 9.5 In",
-                "Small 8 In"
+                "PM"
             ],
             "materials": [
-                "Calfskin",
-                "Canvas",
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Patent",
-                "Pleated",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         }
     },
-    "Airpods Case": {
-        "Airpods Case": {
+    "Soufflot": {
+        "Soufflot": {
             "sizes": [
-                "2nd Gen",
-                "3rd Gen",
-                "Pro"
+                "BB"
             ],
             "materials": [
-                "Caviar",
-                "Lambskin",
-                "Resin",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Epi"
             ]
         }
     },
-    "Kelly": {
-        "Kelly": {
+    "Trio Mini Icones": {
+        "Trio Mini Icones": {
             "sizes": [
-                "Mini Nano 4.75 In",
-                "Nano 7.5 In",
-                "Small 7.75 In"
+                "9.5"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         }
     },
-    "25": {
-        "25": {
+    "Glasses Case": {
+        "Glasses Case": {
             "sizes": [
-                "Large 16.5 In",
-                "Medium 15.7 In",
-                "Small 11.8 In"
+                "16.5"
             ],
             "materials": [
-                "Caviar",
-                "Denim",
-                "Lambskin",
-                "Tweed",
-                "Velvet"
+                "Canvas"
             ]
-        }
-    },
-    "Trendy CC": {
-        "Trendy CC": {
+        },
+        "Sunglasses Case": {
             "sizes": [
-                "Large 33",
-                "Medium 30",
-                "Mini 20",
-                "Small 25"
+                "30"
             ],
             "materials": [
-                "Calfskin",
-                "Caviar",
-                "Lambskin",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+                "Canvas"
             ]
         }
     },
@@ -1714,11 +2470,16 @@
         "Blue",
         "Brown",
         "Burgundy",
-        "Caramel",
+        "Damier Azur",
+        "Damier Ebene",
+        "Damier Graphite",
         "Gold",
         "Green",
-        "Iridescents",
-        "Multicolour",
+        "Grey",
+        "Monogram",
+        "Monogram Eclipse",
+        "Monogram Multicolor",
+        "Multicolor",
         "Navy Blue",
         "Orange",
         "Pink",
@@ -1729,13 +2490,9 @@
         "Yellow"
     ],
     "hardwares": [
+        "Black",
+        "Brown",
         "Gold",
-        "Iridescent",
-        "Light Gold",
-        "Multicolor",
-        "Ruthenium",
-        "Silver",
-        "So Black",
-        "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+        "Silver"
     ]
 }
