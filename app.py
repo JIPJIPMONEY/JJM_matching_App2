@@ -1,5 +1,5 @@
 """
-Customer Loan Management App - Production Version v1.0
+Customer Loan Management App - Production Version v1.4
 Docker-ready Streamlit application for managing customer loan records
 """
 
@@ -719,7 +719,7 @@ if 'edit_from_fixed' not in st.session_state:
 
 # Main app
 def main():
-    st.title("Back Office Matching v1.3")
+    st.title("Back Office Matching v1.4")
     
     # Sidebar
     with st.sidebar:
