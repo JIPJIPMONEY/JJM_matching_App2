@@ -186,6 +186,19 @@
         }
     },
     "WOC": {
+        "Reissue WOC": {
+            "sizes": [
+                "7.5 In"
+            ],
+            "materials": [
+                "Calfskin",
+                "Denim",
+                "Lambskin",
+                "Patent",
+                "Tweed",
+                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
+            ]
+        },
         "WOC": {
             "sizes": [
                 "7.5 In"
@@ -197,21 +210,6 @@
                 "Denim",
                 "Lambskin",
                 "Lizard",
-                "Patent",
-                "Tweed",
-                "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
-            ]
-        }
-    },
-    "nan": {
-        "Reissue WOC": {
-            "sizes": [
-                "7.5 In"
-            ],
-            "materials": [
-                "Calfskin",
-                "Denim",
-                "Lambskin",
                 "Patent",
                 "Tweed",
                 "\u0e2d\u0e37\u0e48\u0e19\u0e46\u0e23\u0e30\u0e1a\u0e38"
