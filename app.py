@@ -1,10 +1,9 @@
 """
-Customer Loan Management App - Production Version v1.4
+Customer Loan Management App - Production Version v1.5
 Docker-ready Streamlit application for managing customer loan records
 """
 
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import os
 import json
@@ -14,7 +13,7 @@ from PIL import Image
 
 # Configure page
 st.set_page_config(
-    page_title="Back office matching v1.4",
+    page_title="Back office matching v1.5",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -39,7 +38,6 @@ class DataManager:
     def __init__(self, excel_file=EXCEL_FILE):
         self.excel_file = excel_file
         self.data_cache = None
-        self.modified_data = {}
         self.fixed_records = set()
         self.unfixed_records = set()
         
@@ -95,21 +93,25 @@ class DataManager:
             return self.data_cache.iloc[index].to_dict()
         return None
     
-    def update_record(self, index, updated_data):
+    def update_record(self, index, updated_data, keep_as_fixed=True):
         if self.data_cache is not None:
             for column, value in updated_data.items():
                 if column in self.data_cache.columns:
                     self.data_cache.loc[index, column] = value
             
-            self.modified_data[index] = updated_data
-            
-            # Update tracking in memory
-            if index in self.unfixed_records:
-                self.unfixed_records.remove(index)
-            self.fixed_records.add(index)
-            
-            # Update Status column in the dataframe
-            self.data_cache.loc[index, 'Status'] = 1
+            # Update tracking in memory based on keep_as_fixed parameter
+            if keep_as_fixed:
+                # Keep as fixed (default behavior)
+                if index in self.unfixed_records:
+                    self.unfixed_records.remove(index)
+                self.fixed_records.add(index)
+                self.data_cache.loc[index, 'Status'] = 1
+            else:
+                # Mark as unfixed (when editing from fixed records and choosing to unfix)
+                if index in self.fixed_records:
+                    self.fixed_records.remove(index)
+                self.unfixed_records.add(index)
+                self.data_cache.loc[index, 'Status'] = 0
             
             # Save to Excel file immediately
             self.save_to_excel()
@@ -126,10 +128,6 @@ class DataManager:
                     self.fixed_records.remove(index)
                 if index in self.unfixed_records:
                     self.unfixed_records.remove(index)
-                
-                # Remove from modified data if exists
-                if index in self.modified_data:
-                    del self.modified_data[index]
                 
                 # Drop the record from dataframe
                 self.data_cache = self.data_cache.drop(index)
@@ -337,12 +335,25 @@ def create_filters(df):
     """Create filter widgets with dependent dropdowns"""
     st.subheader("🔍 Filters")
     
-    # First row: Status filter
-    col_status = st.columns(1)[0]
+    # First row: Status filter and Form ID Search
+    col_status, col_search = st.columns([1, 1])
+    filters = {}
+    
     with col_status:
         status_options = ["All", "✅ Fixed", "❌ Unfixed"]
-        filters = {}
         filters['status'] = st.selectbox("📊 Status", status_options, key="filter_status")
+    
+    with col_search:
+        # Form ID Search
+        if 'Form_ids' in df.columns:
+            filters['form_id_search'] = st.text_input(
+                "🔍 Search Form ID", 
+                placeholder="Enter exact Form ID to search...",
+                key="form_id_search",
+                help="Search for records with exact Form ID match (case-insensitive)"
+            )
+        else:
+            filters['form_id_search'] = ""
     
     # Second row: Other filters
     col1, col2, col3, col4 = st.columns(4)
@@ -391,6 +402,8 @@ def create_filters(df):
     active_filters = []
     if filters['status'] != "All":
         active_filters.append(f"Status='{filters['status']}'")
+    if filters.get('form_id_search', '').strip():
+        active_filters.append(f"Form ID='{filters['form_id_search']}'")
     if filters['type'] != "All":
         active_filters.append(f"Type='{filters['type']}'")
     if filters['brand'] != "All":
@@ -413,6 +426,14 @@ def apply_filters(df, filters):
     elif filters.get('status') == "❌ Unfixed" and 'Status' in df.columns:
         filtered_df = filtered_df[filtered_df['Status'] == 0]
     
+    # Form ID search filter
+    if filters.get('form_id_search', '').strip() and 'Form_ids' in df.columns:
+        search_term = filters['form_id_search'].strip()
+        # Exact match (case-insensitive)
+        filtered_df = filtered_df[
+            filtered_df['Form_ids'].astype(str).str.lower() == search_term.lower()
+        ]
+    
     # Contract filter
     if filters.get('contract') == "Not Empty" and 'Contract_Numbers' in df.columns:
         filtered_df = filtered_df[filtered_df['Contract_Numbers'].notna()]
@@ -431,7 +452,8 @@ def apply_filters(df, filters):
     
     return filtered_df
 
-def create_edit_form(selected_row, keyword_manager, data_manager):
+
+def create_edit_form(selected_row, keyword_manager, data_manager, context="main"):
     """Create edit form with dependent dropdowns - compact version for right column"""
     
     # Initialize form state
@@ -457,7 +479,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         "Type",
         types_options,
         index=type_idx,
-        key="edit_type"
+        key=f"edit_type_{context}"
     )
     
     if selected_type != st.session_state.form_state['type']:
@@ -473,7 +495,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         "Brand", 
         brands, 
         index=brand_idx,
-        key="edit_brand"
+        key=f"edit_brand_{context}"
     )
     
     if selected_brand != st.session_state.form_state['brand']:
@@ -498,7 +520,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         "Model", 
         models, 
         index=model_idx,
-        key="edit_model"
+        key=f"edit_model_{context}"
     )
     
     if selected_model != st.session_state.form_state['model']:
@@ -524,7 +546,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         "Sub-Model", 
         submodels, 
         index=submodel_idx,
-        key="edit_submodel"
+        key=f"edit_submodel_{context}"
     )
     
     if selected_submodel != st.session_state.form_state['submodel']:
@@ -552,7 +574,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         "Size", 
         sizes, 
         index=size_idx,
-        key="edit_size"
+        key=f"edit_size_{context}"
     )
     
     if selected_size != st.session_state.form_state['size']:
@@ -578,7 +600,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         "Material", 
         materials, 
         index=material_idx,
-        key="edit_material"
+        key=f"edit_material_{context}"
     )
     
     if selected_material != st.session_state.form_state['material']:
@@ -594,7 +616,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         "Color", 
         colors, 
         index=color_idx,
-        key="edit_color"
+        key=f"edit_color_{context}"
     )
     
     if selected_color != st.session_state.form_state['color']:
@@ -610,7 +632,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         "Hardware", 
         hardwares, 
         index=hardware_idx,
-        key="edit_hardware"
+        key=f"edit_hardware_{context}"
     )
     
     if selected_hardware != st.session_state.form_state['hardware']:
@@ -631,7 +653,10 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
     # Action buttons - stacked vertically for narrow column
     #st.markdown("---")
     
-    if st.button("💾 Save Changes", type="primary", use_container_width=True):
+    # Main edit form is now only used for Data Management tab, always keep as fixed
+    keep_as_fixed = True
+    
+    if st.button("💾 Save Changes", type="primary", use_container_width=True, key=f"save_btn_{context}"):
         # Prepare updated data
         updated_data = {
             'Types': selected_type,
@@ -644,27 +669,25 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
             'Materials': selected_material
         }
         
-        # Update the record
-        success = data_manager.update_record(selected_row['_index'], updated_data)
+        # Update the record with the status choice
+        success = data_manager.update_record(selected_row['_index'], updated_data, keep_as_fixed)
         
         if success:
             st.success("✅ Record updated successfully!")
             st.session_state.selected_row = None
             st.session_state.show_edit_form = False
-            st.session_state.edit_from_fixed = False  # Clear the flag
             if 'form_state' in st.session_state:
                 del st.session_state.form_state
             st.rerun()
         else:
             st.error("❌ Failed to save changes")
     
-    if st.button("🗑️ Delete Record", type="secondary", use_container_width=True):
+    if st.button("🗑️ Delete Record", type="secondary", use_container_width=True, key=f"delete_btn_{context}"):
         st.session_state.show_delete_popup = True
     
-    if st.button("❌ Cancel", use_container_width=True):
+    if st.button("❌ Cancel", use_container_width=True, key=f"cancel_btn_{context}"):
         st.session_state.selected_row = None
         st.session_state.show_edit_form = False
-        st.session_state.edit_from_fixed = False  # Clear the flag
         if 'form_state' in st.session_state:
             del st.session_state.form_state
         st.rerun()
@@ -698,6 +721,267 @@ def create_edit_form(selected_row, keyword_manager, data_manager):
         
         delete_confirmation()
 
+def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
+    """Independent edit form for Fixed Records tab - uses separate state"""
+    
+    # Initialize SEPARATE form state for fixed records
+    if 'fixed_form_state' not in st.session_state:
+        st.session_state.fixed_form_state = {
+            'type': selected_row.get('Types', ''),
+            'brand': selected_row.get('Brands', ''),
+            'model': selected_row.get('Models', ''),
+            'submodel': selected_row.get('Sub-Models', ''),
+            'size': selected_row.get('Sizes', ''),
+            'color': selected_row.get('Colors', ''),
+            'hardware': selected_row.get('Hardwares', ''),
+            'material': selected_row.get('Materials', '')
+        }
+    
+    # Types dropdown
+    types_options = ['', 'Bag', 'Jewelry', 'Watch']
+    type_idx = 0
+    if st.session_state.fixed_form_state['type'] in types_options:
+        type_idx = types_options.index(st.session_state.fixed_form_state['type'])
+    
+    selected_type = st.selectbox(
+        "Type",
+        types_options,
+        index=type_idx,
+        key="fixed_edit_type"
+    )
+    
+    if selected_type != st.session_state.fixed_form_state['type']:
+        st.session_state.fixed_form_state['type'] = selected_type
+    
+    # Brand dropdown
+    brands = [''] + keyword_manager.get_available_brands()
+    brand_idx = 0
+    if st.session_state.fixed_form_state['brand'] in brands:
+        brand_idx = brands.index(st.session_state.fixed_form_state['brand'])
+    
+    selected_brand = st.selectbox(
+        "Brand", 
+        brands, 
+        index=brand_idx,
+        key="fixed_edit_brand"
+    )
+    
+    if selected_brand != st.session_state.fixed_form_state['brand']:
+        st.session_state.fixed_form_state['brand'] = selected_brand
+        st.session_state.fixed_form_state['model'] = ''
+        st.session_state.fixed_form_state['submodel'] = ''
+        st.session_state.fixed_form_state['size'] = ''
+        st.session_state.fixed_form_state['material'] = ''
+    
+    # Model dropdown
+    models = ['']
+    if selected_brand:
+        brand_data = keyword_manager.get_brand_data(selected_brand)
+        if brand_data:
+            models.extend([key for key in brand_data.keys() if key not in ['colors', 'hardwares']])
+    
+    model_idx = 0
+    if st.session_state.fixed_form_state['model'] in models:
+        model_idx = models.index(st.session_state.fixed_form_state['model'])
+    
+    selected_model = st.selectbox(
+        "Model", 
+        models, 
+        index=model_idx,
+        key="fixed_edit_model"
+    )
+    
+    if selected_model != st.session_state.fixed_form_state['model']:
+        st.session_state.fixed_form_state['model'] = selected_model
+        st.session_state.fixed_form_state['submodel'] = ''
+        st.session_state.fixed_form_state['size'] = ''
+        st.session_state.fixed_form_state['material'] = ''
+    
+    # Sub-Model dropdown
+    submodels = ['']
+    if selected_brand and selected_model:
+        brand_data = keyword_manager.get_brand_data(selected_brand)
+        if brand_data and selected_model in brand_data:
+            model_data = brand_data[selected_model]
+            if isinstance(model_data, dict):
+                submodels.extend(list(model_data.keys()))
+    
+    submodel_idx = 0
+    if st.session_state.fixed_form_state['submodel'] in submodels:
+        submodel_idx = submodels.index(st.session_state.fixed_form_state['submodel'])
+    
+    selected_submodel = st.selectbox(
+        "Sub-Model", 
+        submodels, 
+        index=submodel_idx,
+        key="fixed_edit_submodel"
+    )
+    
+    if selected_submodel != st.session_state.fixed_form_state['submodel']:
+        st.session_state.fixed_form_state['submodel'] = selected_submodel
+        st.session_state.fixed_form_state['size'] = ''
+        st.session_state.fixed_form_state['material'] = ''
+    
+    # Size dropdown
+    sizes = ['']
+    if selected_brand and selected_model and selected_submodel:
+        brand_data = keyword_manager.get_brand_data(selected_brand)
+        if (brand_data and 
+            selected_model in brand_data and
+            selected_submodel in brand_data[selected_model]):
+            
+            submodel_data = brand_data[selected_model][selected_submodel]
+            if isinstance(submodel_data, dict) and 'sizes' in submodel_data:
+                sizes.extend(submodel_data['sizes'])
+    
+    size_idx = 0
+    if st.session_state.fixed_form_state['size'] in sizes:
+        size_idx = sizes.index(st.session_state.fixed_form_state['size'])
+    
+    selected_size = st.selectbox(
+        "Size", 
+        sizes, 
+        index=size_idx,
+        key="fixed_edit_size"
+    )
+    
+    if selected_size != st.session_state.fixed_form_state['size']:
+        st.session_state.fixed_form_state['size'] = selected_size
+    
+    # Material dropdown
+    materials = ['']
+    if selected_brand and selected_model and selected_submodel:
+        brand_data = keyword_manager.get_brand_data(selected_brand)
+        if (brand_data and 
+            selected_model in brand_data and
+            selected_submodel in brand_data[selected_model]):
+            
+            submodel_data = brand_data[selected_model][selected_submodel]
+            if isinstance(submodel_data, dict) and 'materials' in submodel_data:
+                materials.extend(submodel_data['materials'])
+    
+    material_idx = 0
+    if st.session_state.fixed_form_state['material'] in materials:
+        material_idx = materials.index(st.session_state.fixed_form_state['material'])
+    
+    selected_material = st.selectbox(
+        "Material", 
+        materials, 
+        index=material_idx,
+        key="fixed_edit_material"
+    )
+    
+    if selected_material != st.session_state.fixed_form_state['material']:
+        st.session_state.fixed_form_state['material'] = selected_material
+    
+    # Color dropdown
+    colors = [''] + keyword_manager.get_brand_colors(selected_brand)
+    color_idx = 0
+    if st.session_state.fixed_form_state['color'] in colors:
+        color_idx = colors.index(st.session_state.fixed_form_state['color'])
+    
+    selected_color = st.selectbox(
+        "Color", 
+        colors, 
+        index=color_idx,
+        key="fixed_edit_color"
+    )
+    
+    if selected_color != st.session_state.fixed_form_state['color']:
+        st.session_state.fixed_form_state['color'] = selected_color
+    
+    # Hardware dropdown
+    hardwares = [''] + keyword_manager.get_brand_hardwares(selected_brand)
+    hardware_idx = 0
+    if st.session_state.fixed_form_state['hardware'] in hardwares:
+        hardware_idx = hardwares.index(st.session_state.fixed_form_state['hardware'])
+    
+    selected_hardware = st.selectbox(
+        "Hardware", 
+        hardwares, 
+        index=hardware_idx,
+        key="fixed_edit_hardware"
+    )
+    
+    if selected_hardware != st.session_state.fixed_form_state['hardware']:
+        st.session_state.fixed_form_state['hardware'] = selected_hardware
+    
+    # Update form state
+    st.session_state.fixed_form_state.update({
+        'type': selected_type,
+        'brand': selected_brand,
+        'model': selected_model,
+        'submodel': selected_submodel,
+        'size': selected_size,
+        'color': selected_color,
+        'hardware': selected_hardware,
+        'material': selected_material
+    })
+    
+    # Action buttons
+    if st.button("💾 Save Changes", type="primary", use_container_width=True, key="fixed_save_btn"):
+        # Prepare updated data
+        updated_data = {
+            'Types': selected_type,
+            'Brands': selected_brand,
+            'Models': selected_model,
+            'Sub-Models': selected_submodel,
+            'Sizes': selected_size,
+            'Colors': selected_color,
+            'Hardwares': selected_hardware,
+            'Materials': selected_material
+        }
+        
+        # Update the record - always keep as fixed since this is the Fixed Records tab
+        success = data_manager.update_record(selected_row['_index'], updated_data, keep_as_fixed=True)
+        
+        if success:
+            st.success("✅ Record updated successfully!")
+            # Clear the fixed records selection state
+            st.session_state.fixed_selected_row = None
+            if 'fixed_form_state' in st.session_state:
+                del st.session_state.fixed_form_state
+            st.rerun()
+        else:
+            st.error("❌ Failed to save changes")
+    
+    if st.button("🗑️ Delete Record", type="secondary", use_container_width=True, key="fixed_delete_btn"):
+        st.session_state.show_fixed_delete_popup = True
+    
+    if st.button("❌ Cancel", use_container_width=True, key="fixed_cancel_btn"):
+        st.session_state.fixed_selected_row = None
+        if 'fixed_form_state' in st.session_state:
+            del st.session_state.fixed_form_state
+        st.rerun()
+    
+    # Delete confirmation popup
+    if st.session_state.get('show_fixed_delete_popup', False):
+        @st.dialog("Delete Record")
+        def fixed_delete_confirmation():
+            st.error("⚠️ Are you sure you want to delete this record?")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                if st.button("🗑️ Yes, Delete", type="primary", use_container_width=True, key="fixed_confirm_delete_btn"):
+                    success = data_manager.delete_record(selected_row['_index'])
+                    
+                    if success:
+                        st.session_state.fixed_selected_row = None
+                        st.session_state.show_fixed_delete_popup = False
+                        if 'fixed_form_state' in st.session_state:
+                            del st.session_state.fixed_form_state
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to delete record")
+            
+            with col2:
+                if st.button("❌ Cancel", use_container_width=True, key="fixed_cancel_delete_btn"):
+                    st.session_state.show_fixed_delete_popup = False
+                    st.rerun()
+        
+        fixed_delete_confirmation()
+
 # Initialize session state
 if 'data_manager' not in st.session_state:
     st.session_state.data_manager = DataManager()
@@ -708,18 +992,21 @@ if 'keyword_manager' not in st.session_state:
 if 'selected_row' not in st.session_state:
     st.session_state.selected_row = None
 
+if 'fixed_selected_row' not in st.session_state:
+    st.session_state.fixed_selected_row = None
+
 if 'show_edit_form' not in st.session_state:
     st.session_state.show_edit_form = False
 
 if 'show_delete_popup' not in st.session_state:
     st.session_state.show_delete_popup = False
 
-if 'edit_from_fixed' not in st.session_state:
-    st.session_state.edit_from_fixed = False
+if 'show_fixed_delete_popup' not in st.session_state:
+    st.session_state.show_fixed_delete_popup = False
 
 # Main app
 def main():
-    st.title("Back Office Matching v1.4")
+    st.title("Back Office Matching v1.5")
     
     # Sidebar
     with st.sidebar:
@@ -787,7 +1074,7 @@ def main():
             
             # Left Column: Image Preview
             with col1:
-                st.header("🖼️ Image Preview")
+                st.subheader("🖼️ Image Preview")
                 
                 # Get current selection data
                 current_selection = st.session_state.get('selected_row', None)
@@ -868,7 +1155,8 @@ def main():
                         column_config=column_config,
                         on_select="rerun",
                         selection_mode="single-row",
-                        height=400  # Fixed height to save space
+                        height=400,  # Fixed height to save space
+                        key="main_data_table"
                     )
                     
                     # Handle row selection
@@ -913,30 +1201,18 @@ def main():
                             st.session_state.show_edit_form = False
                             if 'form_state' in st.session_state:
                                 del st.session_state.form_state
-                    
-                    # Clear selection button
-                    if st.session_state.selected_row is not None:
-                        if st.button("🔄 Clear Selection", use_container_width=True):
-                            st.session_state.selected_row = None
-                            st.session_state.show_edit_form = False
-                            if 'form_state' in st.session_state:
-                                del st.session_state.form_state
-                            st.rerun()
                 else:
                     st.info("No records match the current filters.")
             
             # Right Column: Edit Form
             with col3:
-                # Check if editing from Fixed Records tab
-                if st.session_state.get('edit_from_fixed', False):
-                    st.warning("⚠️ **Editing Fixed Record** - This record was previously marked as complete")
-                
                 st.header("✏️ Edit Record")
                 if st.session_state.show_edit_form and st.session_state.selected_row:
                     create_edit_form(
                         st.session_state.selected_row,
                         st.session_state.keyword_manager,
-                        st.session_state.data_manager
+                        st.session_state.data_manager,
+                        context="main"
                     )
                 else:
                     st.info("Select a record to edit")
@@ -946,7 +1222,7 @@ def main():
             st.info("💡 Ensure your Excel file is mounted in the data directory")
     
     with tab2:
-        st.header("✅ Fixed Records")
+        st.subheader("✅ Fixed Records")
         stats = st.session_state.data_manager.get_tracking_stats()
         
         if stats['fixed'] > 0:
@@ -956,54 +1232,118 @@ def main():
                 
                 st.subheader(f"Total Fixed Records: {len(fixed_df)}")
                 
-                # Display interactive dataframe for fixed records
-                display_fixed_df = fixed_df.copy()
-                display_fixed_df_reset = display_fixed_df.reset_index(drop=False)
+                # Create two-column layout: Data Table | Edit Form
+                col1, col2 = st.columns([2, 1])
                 
-                # Configure columns
-                column_config = {
-                    "Picture_url": st.column_config.LinkColumn(
-                        "Picture URL",
-                        help="Click to view image",
-                        display_text="View Image"
-                    ) if 'Picture_url' in display_fixed_df_reset.columns else None,
-                }
-                
-                if 'index' in display_fixed_df_reset.columns:
-                    column_config["index"] = None
-                
-                # Interactive dataframe for fixed records
-                fixed_event = st.dataframe(
-                    display_fixed_df_reset,
-                    use_container_width=True,
-                    hide_index=True,
-                    column_config=column_config,
-                    on_select="rerun",
-                    selection_mode="multi-row"
-                )
-                
-                # Handle selection for fixed records
-                if fixed_event.selection.rows:
-                    selected_indices = []
-                    for selected_idx in fixed_event.selection.rows:
-                        if 'index' in display_fixed_df_reset.columns:
-                            original_idx = display_fixed_df_reset.iloc[selected_idx]['index']
-                        else:
-                            original_idx = fixed_df.iloc[selected_idx].name
-                        selected_indices.append(original_idx)
+                with col1:
+                    # Display interactive dataframe for fixed records
+                    display_fixed_df = fixed_df.copy()
                     
-                    st.info(f"✅ Selected {len(selected_indices)} fixed record(s)")
+                    # Add visual Status column
+                    if 'Status' in display_fixed_df.columns:
+                        display_fixed_df['Status_Display'] = display_fixed_df['Status'].map({
+                            0: '❌ Unfixed',
+                            1: '✅ Fixed'
+                        })
+                        cols = ['Status_Display'] + [col for col in display_fixed_df.columns if col not in ['Status_Display', 'Status']]
+                        display_fixed_df = display_fixed_df[cols]
                     
-                    # Only Unfix Selected button
-                    if st.button("🔄 Unfix Selected", type="primary", use_container_width=True):
-                        success_count = st.session_state.data_manager.bulk_unfix_records(selected_indices)
-                        if success_count > 0:
-                            st.success(f"✅ {success_count} record(s) moved back to unfixed!")
-                            st.rerun()
-                        else:
-                            st.error("❌ Failed to unfix records")
-                else:
-                    st.info("Select one or more records to unfix them")
+                    display_fixed_df_reset = display_fixed_df.reset_index(drop=False)
+                    
+                    # Configure columns
+                    column_config = {
+                        "Picture_url": st.column_config.LinkColumn(
+                            "Picture URL",
+                            help="Click to view image",
+                            display_text="View Image"
+                        ) if 'Picture_url' in display_fixed_df_reset.columns else None,
+                        "Status_Display": st.column_config.TextColumn(
+                            "Status",
+                            help="Record status",
+                            width="small"
+                        ) if 'Status_Display' in display_fixed_df_reset.columns else None,
+                    }
+                    
+                    if 'index' in display_fixed_df_reset.columns:
+                        column_config["index"] = None
+                    
+                    # Interactive dataframe for fixed records
+                    fixed_event = st.dataframe(
+                        display_fixed_df_reset,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config=column_config,
+                        on_select="rerun",
+                        selection_mode="single-row",  # Change to single-row like Data Management
+                        height=400,
+                        key="fixed_records_table"
+                    )
+                    
+                    # Handle selection for fixed records - similar to Data Management tab
+                    if fixed_event.selection.rows:
+                        try:
+                            selected_idx = fixed_event.selection.rows[0]
+                            
+                            # Get the original index from the filtered dataframe
+                            if 'index' in display_fixed_df_reset.columns:
+                                original_idx = display_fixed_df_reset.iloc[selected_idx]['index']
+                            else:
+                                original_idx = fixed_df.iloc[selected_idx].name
+                            
+                            # Always update if selection changed or no selection exists
+                            current_fixed_selected_row = st.session_state.get('fixed_selected_row', None)
+                            current_selection = current_fixed_selected_row.get('_index', None) if current_fixed_selected_row else None
+                            
+                            if current_selection != original_idx:
+                                selected_data = df.loc[original_idx].to_dict()
+                                selected_data['_index'] = original_idx
+                                
+                                st.session_state.fixed_selected_row = selected_data
+                                
+                                # Clear form state when switching records
+                                if 'fixed_form_state' in st.session_state:
+                                    del st.session_state.fixed_form_state
+                                
+                                st.success(f"✅ Selected: Contract {selected_data.get('Contract_Numbers', 'N/A')} | Index: {original_idx}")
+                                
+                                # Force rerun to update edit form
+                                st.rerun()
+                        
+                        except Exception as e:
+                            st.error(f"❌ Error selecting row: {str(e)}")
+                            st.error(f"Debug info - Selected idx: {selected_idx}, Available rows: {len(display_fixed_df_reset)}")
+                    else:
+                        # Clear selection when no rows are selected
+                        if st.session_state.get('fixed_selected_row') is not None:
+                            st.session_state.fixed_selected_row = None
+                            if 'fixed_form_state' in st.session_state:
+                                del st.session_state.fixed_form_state
+                    
+                    # Additional action buttons (only show if record is selected)
+                    if st.session_state.get('fixed_selected_row'):
+                        st.markdown("---")
+                        if st.button("🔄 Unfix This Record", type="secondary", use_container_width=True, key="fixed_unfix_single_btn"):
+                            success_count = st.session_state.data_manager.bulk_unfix_records([st.session_state.fixed_selected_row['_index']])
+                            if success_count > 0:
+                                st.success("✅ Record moved back to unfixed!")
+                                st.session_state.fixed_selected_row = None
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to unfix record")
+                
+                with col2:
+                    # Edit Form for Fixed Records - ALWAYS SHOW IF WE HAVE SELECTED ROW
+                    st.subheader("✏️ Edit Fixed Record")
+                    
+                    # Show edit form if we have a fixed record selected
+                    if st.session_state.fixed_selected_row:
+                        create_fixed_edit_form(
+                            st.session_state.fixed_selected_row,
+                            st.session_state.keyword_manager,
+                            st.session_state.data_manager
+                        )
+                    else:
+                        st.info("Click on a row in the table to edit the record")
         else:
             st.info("No records have been fixed yet.")
     
@@ -1031,7 +1371,7 @@ def main():
                 else:
                     page_df = unfixed_df
                 
-                st.dataframe(page_df, use_container_width=True)
+                st.dataframe(page_df, use_container_width=True, key="unfixed_records_table")
         else:
             st.success("🎉 All records have been fixed!")
     
@@ -1127,7 +1467,7 @@ def main():
         with col1:
             st.write("**🔄 ลองแก้ไขเบื้องต้น**")
             st.write("• Refresh หน้าเว็บ (F5)")
-            st.write("• Clear Selection และเลือกใหม่")
+
         with col2:
             st.write("**📝 บันทึกข้อมูล**")
             st.write("• บันทึกสิ่งที่เกิดขึ้น")
