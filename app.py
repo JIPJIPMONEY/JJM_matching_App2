@@ -1010,7 +1010,7 @@ def main():
     
     # Sidebar
     with st.sidebar:
-        st.header("📊 Dashboard")
+        st.subheader("📊 Dashboard")
         stats = st.session_state.data_manager.get_tracking_stats()
         
         col1, col2 = st.columns(2)
@@ -1206,7 +1206,7 @@ def main():
             
             # Right Column: Edit Form
             with col3:
-                st.header("✏️ Edit Record")
+                st.subheader("✏️ Edit Record")
                 if st.session_state.show_edit_form and st.session_state.selected_row:
                     create_edit_form(
                         st.session_state.selected_row,
@@ -1348,7 +1348,7 @@ def main():
             st.info("No records have been fixed yet.")
     
     with tab3:
-        st.header("❌ Unfixed Records")
+        st.subheader("❌ Unfixed Records")
         stats = st.session_state.data_manager.get_tracking_stats()
         
         if stats['unfixed'] > 0:
