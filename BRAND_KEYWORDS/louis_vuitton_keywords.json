@@ -2309,6 +2309,7 @@
     "Ellipse": {
         "Ellipse": {
             "sizes": [
+                "BB",
                 "MM",
                 "PM"
             ],
