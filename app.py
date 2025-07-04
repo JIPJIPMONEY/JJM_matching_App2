@@ -12,6 +12,10 @@ from urllib.parse import urlparse
 import requests
 from PIL import Image
 
+# Import database models and managers
+from models import Base, Brand, Model, ModelSize, ModelMaterial, BrandColor, BrandHardware, create_tables
+from database_keyword_manager import DatabaseKeywordManager
+
 # Configure page
 st.set_page_config(
     page_title="Back office matching v2.0",
@@ -31,17 +35,6 @@ db_config = {
 
 # Data paths - check both local and mounted data directory (for keywords only now)
 DATA_DIR = "/app/data" if os.path.exists("/app/data") else "."
-
-# BRAND_KEYWORDS directory - check multiple possible locations
-if os.path.exists("/app/BRAND_KEYWORDS"):
-    # Running in Docker, keywords are in /app/BRAND_KEYWORDS
-    KEYWORDS_DIR = "/app/BRAND_KEYWORDS"
-elif os.path.exists(os.path.join(DATA_DIR, "BRAND_KEYWORDS")):
-    # Running locally or keywords mounted in data directory
-    KEYWORDS_DIR = os.path.join(DATA_DIR, "BRAND_KEYWORDS")
-else:
-    # Fallback to current directory
-    KEYWORDS_DIR = "BRAND_KEYWORDS"
 
 class DataManager:
     """
@@ -72,24 +65,24 @@ class DataManager:
                 return None
         return self.engine
     
-    def test_connections(self):
-        """Test SQLAlchemy connection"""
-        test_results = {
-            'sqlalchemy': False,
-            'errors': []
-        }
+    #def test_connections(self):
+        #"""Test SQLAlchemy connection"""
+        #test_results = {
+            #'sqlalchemy': False,
+            #'errors': []
+        #}
         
-        # Test SQLAlchemy engine
-        try:
-            engine = self.get_engine()
-            if engine:
+        ## Test SQLAlchemy engine
+        #try:
+            #engine = self.get_engine()
+            #if engine:
                 # Test with a simple query using text()
-                pd.read_sql_query(text("SELECT 1 as test"), engine)
-                test_results['sqlalchemy'] = True
-        except Exception as e:
-            test_results['errors'].append(f"SQLAlchemy test failed: {str(e)}")
+                #pd.read_sql_query(text("SELECT 1 as test"), engine)
+                #test_results['sqlalchemy'] = True
+        #except Exception as e:
+            #test_results['errors'].append(f"SQLAlchemy test failed: {str(e)}")
         
-        return test_results
+        #return test_results
     
     def load_data(self):
         """Load data from PostgreSQL database using SQLAlchemy"""
@@ -310,61 +303,97 @@ class DataManager:
         return None
 
 class KeywordManager:
-    def __init__(self, keywords_dir=KEYWORDS_DIR):
-        self.keywords_dir = keywords_dir
-        self.keywords_cache = {}
+    """
+    Database-based keyword manager that reads brand data from PostgreSQL database
+    Provides the same interface as the original JSON-based KeywordManager
+    """
+    
+    def __init__(self, db_config=db_config):
+        self.db_config = db_config
+        self.session = None
+        self.engine = None
         self.global_data = {}
+        self.brands_cache = {}
+        self.keywords_loaded = False  # Flag to track if keywords are loaded
+        self.connect_to_database()
         self.load_all_keywords()
     
-    def load_all_keywords(self):
-        """Load brand keywords from JSON files listed in brands_list.txt"""
+    def connect_to_database(self):
+        """Establish database connection"""
         try:
-            if not os.path.exists(self.keywords_dir):
-                return
-                
-            brands_list_file = os.path.join(self.keywords_dir, "brands_list.txt")
-            
-            if os.path.exists(brands_list_file):
-                # Load brands from the brands_list.txt file
-                with open(brands_list_file, 'r', encoding='utf-8') as f:
-                    brand_files = [line.strip() for line in f 
-                                 if line.strip() and not line.strip().startswith('#')]
-                
-                for brand_file in brand_files:
-                    # Handle both old format (BRAND/file.json) and new format (file.json)
-                    if '/' in brand_file:
-                        # Old format: CHANEL/chanel_keywords.json
-                        brand_name = brand_file.split('/')[0]
-                        filename = brand_file.split('/')[1]
-                    else:
-                        # New format: chanel_keywords.json
-                        filename = brand_file
-                        brand_name = brand_file.replace('_keywords.json', '').replace('.json', '')
-                    
-                    # Try to find the file directly in keywords_dir
-                    brand_path = os.path.join(self.keywords_dir, filename)
-                    if os.path.exists(brand_path):
-                        self.load_brand_keywords(brand_path, brand_name)
-            else:
-                # Fallback: auto-discover JSON files in the directory
-                for item in os.listdir(self.keywords_dir):
-                    if item.endswith('.json') and 'keywords' in item.lower():
-                        brand_path = os.path.join(self.keywords_dir, item)
-                        brand_name = item.replace('_keywords.json', '').replace('.json', '')
-                        self.load_brand_keywords(brand_path, brand_name)
-                            
-            self.extract_global_data()
-                            
+            from models import get_session
+            self.session, self.engine = get_session(self.db_config)
+            return True
         except Exception as e:
-            pass
+            st.error(f"❌ Failed to connect to keyword database: {e}")
+            return False
     
-    def load_brand_keywords(self, json_path, brand_name):
+    def load_all_keywords(self, force_reload=False):
+        """Load all brand keywords from database and cache them"""
+        # Only load if not already loaded or force reload is requested
+        if self.keywords_loaded and not force_reload:
+            return
+            
         try:
-            with open(json_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                self.keywords_cache[brand_name.upper()] = data
+            if not self.session:
+                return
+            
+            from models import Brand, Model, ModelSize, ModelMaterial, BrandColor, BrandHardware
+            from sqlalchemy.orm import joinedload
+            
+            # Clear cache before reloading
+            self.brands_cache = {}
+            self.global_data = {}
+            
+            # Load all brands with their related data
+            brands = self.session.query(Brand).options(
+                joinedload(Brand.models).joinedload(Model.sizes),
+                joinedload(Brand.models).joinedload(Model.materials),
+                joinedload(Brand.colors),
+                joinedload(Brand.hardwares)
+            ).all()
+            
+            # Cache brand data in the same format as JSON-based system
+            for brand in brands:
+                brand_data = {}
+                
+                # Group models by collection
+                collections = {}
+                for model in brand.models:
+                    collection = model.collection or "default"
+                    if collection not in collections:
+                        collections[collection] = {}
+                    
+                    # Add model with sizes and materials
+                    model_data = {}
+                    if model.sizes:
+                        model_data['sizes'] = [size.size for size in model.sizes]
+                    if model.materials:
+                        model_data['materials'] = [material.material for material in model.materials]
+                    
+                    collections[collection][model.model_name] = model_data
+                
+                # Add collections to brand data
+                brand_data.update(collections)
+                
+                # Add global colors and hardwares
+                if brand.colors:
+                    brand_data['colors'] = [color.color for color in brand.colors]
+                if brand.hardwares:
+                    brand_data['hardwares'] = [hardware.hardware for hardware in brand.hardwares]
+                
+                # Cache the brand data
+                self.brands_cache[brand.name.upper()] = brand_data
+            
+            # Extract global data
+            self.extract_global_data()
+            
+            # Mark as loaded
+            self.keywords_loaded = True
+            
         except Exception as e:
-            pass
+            st.error(f"❌ Error loading keywords from database: {e}")
+            self.keywords_loaded = False
     
     def extract_global_data(self):
         """Extract colors and materials organized by brand and globally"""
@@ -373,7 +402,7 @@ class KeywordManager:
         brand_colors = {}
         brand_hardwares = {}
         
-        for brand_name, brand_data in self.keywords_cache.items():
+        for brand_name, brand_data in self.brands_cache.items():
             brand_colors[brand_name] = set()
             brand_hardwares[brand_name] = set()
             
@@ -394,15 +423,19 @@ class KeywordManager:
         }
     
     def get_available_brands(self):
-        return list(self.keywords_cache.keys())
+        """Get list of available brands"""
+        return list(self.brands_cache.keys())
     
     def get_brand_data(self, brand):
-        return self.keywords_cache.get(brand.upper(), {})
+        """Get data for a specific brand"""
+        return self.brands_cache.get(brand.upper(), {})
     
     def get_global_colors(self):
+        """Get all colors across all brands"""
         return self.global_data.get('colors', [])
     
     def get_global_materials(self):
+        """Get all hardwares/materials across all brands"""
         return self.global_data.get('hardwares', [])
     
     def get_brand_colors(self, brand):
@@ -416,6 +449,18 @@ class KeywordManager:
         if brand:
             return self.global_data.get('brand_hardwares', {}).get(brand.upper(), [])
         return self.get_global_materials()
+    
+    def refresh_cache(self):
+        """Refresh the cache by reloading data from database - Manual refresh only"""
+        self.keywords_loaded = False  # Reset the flag to allow reload
+        self.brands_cache = {}
+        self.global_data = {}
+        self.load_all_keywords(force_reload=True)
+    
+    def __del__(self):
+        """Clean up database connection"""
+        if self.session:
+            self.session.close()
 
 def create_filters(df):
     """Create filter widgets with dependent dropdowns"""
@@ -1031,48 +1076,18 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
         else:
             st.error("❌ Failed to save changes")
     
-    if st.button("🗑️ Delete Record", type="secondary", use_container_width=True, key="fixed_delete_btn"):
-        st.session_state.show_fixed_delete_popup = True
-    
     if st.button("❌ Cancel", use_container_width=True, key="fixed_cancel_btn"):
         st.session_state.fixed_selected_row = None
         if 'fixed_form_state' in st.session_state:
             del st.session_state.fixed_form_state
         st.rerun()
     
-    # Delete confirmation popup
-    if st.session_state.get('show_fixed_delete_popup', False):
-        @st.dialog("Delete Record")
-        def fixed_delete_confirmation():
-            st.error("⚠️ Are you sure you want to delete this record?")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if st.button("🗑️ Yes, Delete", type="primary", use_container_width=True, key="fixed_confirm_delete_btn"):
-                    success = data_manager.delete_record(selected_row['_index'])
-                    
-                    if success:
-                        st.session_state.fixed_selected_row = None
-                        st.session_state.show_fixed_delete_popup = False
-                        if 'fixed_form_state' in st.session_state:
-                            del st.session_state.fixed_form_state
-                        st.rerun()
-                    else:
-                        st.error("❌ Failed to delete record")
-            
-            with col2:
-                if st.button("❌ Cancel", use_container_width=True, key="fixed_cancel_delete_btn"):
-                    st.session_state.show_fixed_delete_popup = False
-                    st.rerun()
-        
-        fixed_delete_confirmation()
-
 # Initialize session state
 if 'data_manager' not in st.session_state:
     st.session_state.data_manager = DataManager()
 
 if 'keyword_manager' not in st.session_state:
+    # Initialize keyword manager only once
     st.session_state.keyword_manager = KeywordManager()
 
 if 'selected_row' not in st.session_state:
@@ -1115,9 +1130,27 @@ def main():
         st.markdown("---")
         
         # Export controls
-        st.subheader("💾 Data Export")
-        
-        if st.button("📁 Export to Excel", type="primary"):
+        st.subheader("🔧 Option")
+        # Keywords refresh
+        if st.button("🔄 Refresh Keywords", type="primary"):
+            try:
+                with st.spinner("Refreshing keywords from database..."):
+                    # Refresh the keyword manager cache
+                    st.session_state.keyword_manager.refresh_cache()
+                    
+                    # Get updated stats
+                    brands = st.session_state.keyword_manager.get_available_brands()
+                    
+                    if brands:
+                        st.success(f"✅ Keywords refreshed!")
+                    else:
+                        st.warning("⚠️ No keywords found in database")
+                        #st.info("💡 Run load_keywords_to_db.py to add keywords to database")
+                        
+            except Exception as e:
+                st.error(f"❌ Failed to refresh keywords: {e}")
+
+        if st.button("📁 Export to Excel", type="secondary"):
             filename = st.session_state.data_manager.export_to_excel()
             if filename:
                 st.success(f"✅ Exported: {os.path.basename(filename)}")
@@ -1125,29 +1158,33 @@ def main():
                 st.error("❌ Export failed")
         
             # Connection test
-            if st.button("🔧 Test Database Connection", help="Test SQLAlchemy database connection"):
-                test_results = st.session_state.data_manager.test_connections()
-                
-                if test_results['sqlalchemy']:
-                    st.success("✅ Database connection working!")
-                else:
-                    st.error("❌ Database connection failed!")
-                
-                for error in test_results['errors']:
-                    st.error(f"🔍 {error}")
+        #if st.button("🔧 Test DB Connection",type="primary"):
+            #test_results = st.session_state.data_manager.test_connections()
+            
+            #if test_results['sqlalchemy']:
+                #st.success("✅ Database connection working!")
+            #else:
+                #st.error("❌ Database connection failed!")
+            
+            #for error in test_results['errors']:
+                #st.error(f"🔍 {error}")
+        
+        
         
         # System info
         st.markdown("---")
         st.caption("🐳 Using PostgreSQL Database (SQLAlchemy)")
         st.caption(f"🗄️ Database: {db_config['host']}:{db_config['port']}")
-        st.caption(f"📁 Keywords: {DATA_DIR}")
         
-        # Keywords info
+        # Keywords database info
         brands = st.session_state.keyword_manager.get_available_brands()
         if brands:
-            st.caption(f"🏷️ Brands: {len(brands)}")
-        else:
-            st.caption("⚠️ No keyword files loaded")
+            st.caption(f"🏷️ Brands in Database: {len(brands)}")
+            # Show brand list in an expandable section
+            with st.expander("View Brand Names", expanded=False):
+                for brand in sorted(brands):
+                    st.caption(f"• {brand}")
+            
     
     # Main tabs
     tab1, tab2, tab3, tab4 = st.tabs(["📋 Data Management", "✅ Fixed Records", "❌ Unfixed Records", "📖 User Manual"])
@@ -1312,7 +1349,8 @@ def main():
             st.info("💡 Please check database connection and ensure table exists")
     
     with tab2:
-        st.subheader("✅ Fixed Records")
+        col1, col2 = st.columns([2, 1])
+
         stats = st.session_state.data_manager.get_tracking_stats()
         
         if stats['fixed'] > 0:
@@ -1320,12 +1358,14 @@ def main():
             if df is not None:
                 fixed_df = df[df['Status'] == 1].copy()
                 
-                st.subheader(f"Total Fixed Records: {len(fixed_df)}")
                 
                 # Create two-column layout: Data Table | Edit Form
-                col1, col2 = st.columns([2, 1])
+                #col1, col2 = st.columns([2, 1])
                 
                 with col1:
+                    st.subheader("✅ Fixed Records")   
+                    st.subheader(f"Total Fixed Records: {len(fixed_df)}")
+                     
                     # Display interactive dataframe for fixed records
                     display_fixed_df = fixed_df.copy()
                     
