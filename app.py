@@ -1,5 +1,5 @@
 """
-Customer Loan Management App - Production Version v1.6 (PostgreSQL)
+Customer Loan Management App - Production Version v2.0 (PostgreSQL)
 Docker-ready Streamlit application for managing customer loan records with PostgreSQL database
 """
 
@@ -14,7 +14,7 @@ from PIL import Image
 
 # Configure page
 st.set_page_config(
-    page_title="Back office matching v1.6",
+    page_title="Back office matching v2.0",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -1149,7 +1149,7 @@ if 'show_fixed_delete_popup' not in st.session_state:
 
 # Main app
 def main():
-    st.title("Back Office Matching v1.6 (PostgreSQL)")
+    st.title("Back Office Matching v2.0 (PostgreSQL)")
     
     # Sidebar
     with st.sidebar:
@@ -1634,7 +1634,7 @@ def main():
             st.write("• ระบุหมายเลขแถวที่มีปัญหา")
             st.write("• **096-982-2813 (อู๋)**")
         
-        st.success("🎉 เสร็จสิ้น! คุณพร้อมใช้งานระบบ Back Office Matching v1.6 (PostgreSQL) แล้ว!")
+        st.success("🎉 เสร็จสิ้น! คุณพร้อมใช้งานระบบ Back Office Matching v2.0 (PostgreSQL) แล้ว!")
 
 if __name__ == "__main__":
     main()
