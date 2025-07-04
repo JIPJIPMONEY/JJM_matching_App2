@@ -2,11 +2,9 @@
 Customer_Loan_2025_06_07.xlsx
 Customer_test.xlsx
 Customer_Loan_Updated_*.xlsx
-database_keyword_manager.py
 KEYWORD_DATABASE_MIGRATION.md
 load_keywords_to_db.py
 migrate_keywords.py
-models.py
 __init__.py
 
 # Python cache
