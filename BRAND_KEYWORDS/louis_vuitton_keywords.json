@@ -1658,7 +1658,8 @@
                 "30"
             ],
             "materials": [
-                "Leather"
+                "Leather",
+                "Canvas"
             ]
         }
     },
@@ -2480,6 +2481,8 @@
         "Monogram",
         "Monogram Eclipse",
         "Monogram Multicolor",
+        "Monogram Reverse",
+        "Monogram Eclipse Reverse",
         "Multicolor",
         "Navy Blue",
         "Orange",
