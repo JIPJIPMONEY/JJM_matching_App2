@@ -1,27 +1,36 @@
 """
-Customer Loan Management App - Production Version v1.5
-Docker-ready Streamlit application for managing customer loan records
+Customer Loan Management App - Production Version v1.6 (PostgreSQL)
+Docker-ready Streamlit application for managing customer loan records with PostgreSQL database
 """
 
 import streamlit as st
 import pandas as pd
 import os
 import json
+from sqlalchemy import create_engine, text
 from urllib.parse import urlparse
 import requests
 from PIL import Image
 
 # Configure page
 st.set_page_config(
-    page_title="Back office matching v1.5",
+    page_title="Back office matching v1.6",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Data paths - check both local and mounted data directory
+# Database configuration
+db_config = {
+    'user': 'postgres',
+    'password': '8558',
+    'host': '192.168.1.76',
+    'port': '5432',
+    'database': 'jjm_database'
+}
+
+# Data paths - check both local and mounted data directory (for keywords only now)
 DATA_DIR = "/app/data" if os.path.exists("/app/data") else "."
-EXCEL_FILE = os.path.join(DATA_DIR, "Customer_Loan_2025_06_07.xlsx")
 
 # BRAND_KEYWORDS directory - check multiple possible locations
 if os.path.exists("/app/BRAND_KEYWORDS"):
@@ -35,34 +44,100 @@ else:
     KEYWORDS_DIR = "BRAND_KEYWORDS"
 
 class DataManager:
-    def __init__(self, excel_file=EXCEL_FILE):
-        self.excel_file = excel_file
+    """
+    Data Manager for PostgreSQL operations using SQLAlchemy only
+    - All database operations use SQLAlchemy engine for consistency
+    - Eliminates pandas warnings and provides unified database interface
+    """
+    def __init__(self, db_config=db_config):
+        self.db_config = db_config
         self.data_cache = None
         self.fixed_records = set()
         self.unfixed_records = set()
+        self.table_name = "jjm_customer_loan"  # Your existing table name
+        self.engine = None
         
+    def get_engine(self):
+        """Create SQLAlchemy engine for all database operations"""
+        if self.engine is None:
+            try:
+                # Create PostgreSQL connection string for SQLAlchemy
+                connection_string = (
+                    f"postgresql://{self.db_config['user']}:{self.db_config['password']}"
+                    f"@{self.db_config['host']}:{self.db_config['port']}/{self.db_config['database']}"
+                )
+                self.engine = create_engine(connection_string)
+            except Exception as e:
+                st.error(f"❌ SQLAlchemy engine creation failed: {str(e)}")
+                return None
+        return self.engine
+    
+    def test_connections(self):
+        """Test SQLAlchemy connection"""
+        test_results = {
+            'sqlalchemy': False,
+            'errors': []
+        }
+        
+        # Test SQLAlchemy engine
+        try:
+            engine = self.get_engine()
+            if engine:
+                # Test with a simple query using text()
+                pd.read_sql_query(text("SELECT 1 as test"), engine)
+                test_results['sqlalchemy'] = True
+        except Exception as e:
+            test_results['errors'].append(f"SQLAlchemy test failed: {str(e)}")
+        
+        return test_results
+    
     def load_data(self):
+        """Load data from PostgreSQL database using SQLAlchemy"""
         try:
             if self.data_cache is None:
-                if not os.path.exists(self.excel_file):
-                    st.error(f"❌ Excel file not found: {self.excel_file}")
-                    st.info("💡 Please ensure your Excel file is in the data directory")
+                engine = self.get_engine()
+                if engine is None:
                     return None
-                    
-                self.data_cache = pd.read_excel(self.excel_file)
                 
-                # Check if Status column exists, if not create it
+                # Load data from existing table using SQLAlchemy engine
+                query = text(f"SELECT * FROM {self.table_name} ORDER BY form_id")
+                self.data_cache = pd.read_sql_query(query, engine)
+                
+                # Map your database columns to the app's expected column names
+                column_mapping = {
+                    'form_id': 'Form_ids',
+                    'contract_num': 'Contract_Numbers', 
+                    'type': 'Types',
+                    'brand': 'Brands',
+                    'model': 'Models',
+                    'sub_model': 'Sub-Models',
+                    'size': 'Sizes',
+                    'color': 'Colors',
+                    'hardware': 'Hardwares',
+                    'material': 'Materials',
+                    'picture_url': 'Picture_url',
+                    'status': 'Status'
+                }
+                
+                # Rename columns to match existing app expectations
+                for db_col, app_col in column_mapping.items():
+                    if db_col in self.data_cache.columns:
+                        self.data_cache = self.data_cache.rename(columns={db_col: app_col})
+                
+                # Ensure Status column exists and has default values
                 if 'Status' not in self.data_cache.columns:
                     self.data_cache['Status'] = 0
-                    st.success("📋 Added Status column (0=unfixed, 1=fixed)")
-                    self.save_to_excel()
+                    st.info("📋 Added Status column with default values")
+                else:
+                    # Handle NULL values in status column
+                    self.data_cache['Status'] = self.data_cache['Status'].fillna(0)
                 
                 # Load tracking data from Status column
                 self.load_tracking_from_status()
                         
             return self.data_cache
         except Exception as e:
-            st.error(f"Error loading data: {str(e)}")
+            st.error(f"❌ Error loading data from database: {str(e)}")
             return None
     
     def load_tracking_from_status(self):
@@ -74,17 +149,98 @@ class DataManager:
             self.unfixed_records = set(self.data_cache.index) if self.data_cache is not None else set()
             self.fixed_records = set()
     
-    def save_to_excel(self, filename=None):
-        """Save current data back to Excel file"""
+    def save_to_database(self):
+        """Save current data back to database using SQLAlchemy - ONLY for bulk operations like export/reset"""
         if self.data_cache is not None:
-            if filename is None:
-                filename = self.excel_file
-            
             try:
-                self.data_cache.to_excel(filename, index=False)
+                engine = self.get_engine()
+                if engine is None:
+                    return False
+                
+                # Update records individually using SQLAlchemy with proper transaction handling
+                with engine.begin() as conn:  # Use begin() for automatic transaction management
+                    for index, row in self.data_cache.iterrows():
+                        # Map app columns back to database columns
+                        form_id = row.get('Form_ids', row.get('form_id'))
+                        
+                        # Prepare update values, mapping app columns to DB columns
+                        update_sql = text(f"""
+                        UPDATE {self.table_name} 
+                        SET contract_num = :contract_num, type = :type, brand = :brand, model = :model, 
+                            sub_model = :sub_model, size = :size, color = :color, hardware = :hardware, 
+                            material = :material, picture_url = :picture_url, status = :status
+                        WHERE form_id = :form_id
+                        """)
+                        
+                        conn.execute(update_sql, {
+                            'contract_num': row.get('Contract_Numbers'),
+                            'type': row.get('Types'),
+                            'brand': row.get('Brands'),
+                            'model': row.get('Models'),
+                            'sub_model': row.get('Sub-Models'),
+                            'size': row.get('Sizes'),
+                            'color': row.get('Colors'),
+                            'hardware': row.get('Hardwares'),
+                            'material': row.get('Materials'),
+                            'picture_url': row.get('Picture_url'),
+                            'status': int(row.get('Status', 0)),  # Ensure status is int
+                            'form_id': int(form_id)  # Ensure form_id is int
+                        })
+                
                 return True
+                
             except Exception as e:
-                st.error(f"❌ Error saving to Excel: {e}")
+                st.error(f"❌ Error saving to database: {e}")
+                return False
+        return False
+    
+
+
+    def save_single_record(self, index):
+        """Update only one specific record in the database - OPTIMIZED for single changes"""
+        if self.data_cache is not None and index in self.data_cache.index:
+            try:
+                engine = self.get_engine()
+                if engine is None:
+                    return False
+                
+                # Get the specific record to update
+                row = self.data_cache.iloc[index]
+                form_id = row.get('Form_ids', row.get('form_id'))
+                
+                # Update only this specific record using SQLAlchemy
+                with engine.begin() as conn:
+                    update_sql = text(f"""
+                    UPDATE {self.table_name} 
+                    SET contract_num = :contract_num, type = :type, brand = :brand, model = :model, 
+                        sub_model = :sub_model, size = :size, color = :color, hardware = :hardware, 
+                        material = :material, picture_url = :picture_url, status = :status
+                    WHERE form_id = :form_id
+                    """)
+                    
+                    result = conn.execute(update_sql, {
+                        'contract_num': row.get('Contract_Numbers'),
+                        'type': row.get('Types'),
+                        'brand': row.get('Brands'),
+                        'model': row.get('Models'),
+                        'sub_model': row.get('Sub-Models'),
+                        'size': row.get('Sizes'),
+                        'color': row.get('Colors'),
+                        'hardware': row.get('Hardwares'),
+                        'material': row.get('Materials'),
+                        'picture_url': row.get('Picture_url'),
+                        'status': int(row.get('Status', 0)),
+                        'form_id': int(form_id)
+                    })
+                    
+                    if result.rowcount == 0:
+                        st.warning(f"⚠️ No record found with form_id {form_id}")
+                        return False
+                
+                return True
+                
+            except Exception as e:
+                st.error(f"❌ Error updating single record: {e}")
                 return False
         return False
     
@@ -113,16 +269,28 @@ class DataManager:
                 self.unfixed_records.add(index)
                 self.data_cache.loc[index, 'Status'] = 0
             
-            # Save to Excel file immediately
-            self.save_to_excel()
-            
-            return True
+            # Save only this specific record to database
+            return self.save_single_record(index)
         return False
     
     def delete_record(self, index):
-        """Delete a record from the dataframe"""
+        """Delete a record from the dataframe and database using SQLAlchemy"""
         if self.data_cache is not None and index in self.data_cache.index:
             try:
+                # Get the form_id of the record to delete
+                form_id = self.data_cache.loc[index, 'Form_ids']
+                
+                # Delete from database first using SQLAlchemy
+                engine = self.get_engine()
+                if engine:
+                    with engine.begin() as conn:  # Use begin() for automatic transaction management
+                        delete_sql = text(f"DELETE FROM {self.table_name} WHERE form_id = :form_id")
+                        result = conn.execute(delete_sql, {'form_id': int(form_id)})  # Ensure form_id is int
+                        
+                        if result.rowcount == 0:
+                            st.warning(f"⚠️ No record found with form_id {form_id}")
+                            return False
+                
                 # Remove from tracking sets
                 if index in self.fixed_records:
                     self.fixed_records.remove(index)
@@ -138,11 +306,9 @@ class DataManager:
                 # Update tracking sets with new indices
                 self.load_tracking_from_status()
                 
-                # Save to Excel file immediately
-                self.save_to_excel()
-                
                 return True
             except Exception as e:
+                st.error(f"❌ Error deleting record: {str(e)}")
                 return False
         return False
     
@@ -158,38 +324,15 @@ class DataManager:
                 # Update Status column in the dataframe
                 self.data_cache.loc[index, 'Status'] = 0
                 
-                # Save to Excel file immediately
-                self.save_to_excel()
+                # Save only this specific record to database
+                return self.save_single_record(index)
                 
-                return True
             except Exception as e:
+                st.error(f"❌ Error unfixing record: {str(e)}")
                 return False
         return False
     
-    def bulk_unfix_records(self, indices):
-        """Change multiple records status from fixed back to unfixed"""
-        if self.data_cache is not None:
-            try:
-                success_count = 0
-                for index in indices:
-                    if index in self.data_cache.index:
-                        # Update tracking in memory
-                        if index in self.fixed_records:
-                            self.fixed_records.remove(index)
-                        self.unfixed_records.add(index)
-                        
-                        # Update Status column in the dataframe
-                        self.data_cache.loc[index, 'Status'] = 0
-                        success_count += 1
-                
-                # Save to Excel file once
-                if success_count > 0:
-                    self.save_to_excel()
-                
-                return success_count
-            except Exception as e:
-                return 0
-        return 0
+
     
     def get_tracking_stats(self):
         return {
@@ -219,7 +362,7 @@ class DataManager:
             self.fixed_records = set()
             self.unfixed_records = set(self.data_cache.index)
             self.data_cache['Status'] = 0
-            self.save_to_excel()
+            self.save_to_database()
             return True
         return False
 
@@ -1006,7 +1149,7 @@ if 'show_fixed_delete_popup' not in st.session_state:
 
 # Main app
 def main():
-    st.title("Back Office Matching v1.5")
+    st.title("Back Office Matching v1.6 (PostgreSQL)")
     
     # Sidebar
     with st.sidebar:
@@ -1046,11 +1189,24 @@ def main():
                     st.rerun()
                 else:
                     st.error("❌ Reset failed")
+            
+            # Connection test
+            if st.button("🔧 Test Database Connection", help="Test SQLAlchemy database connection"):
+                test_results = st.session_state.data_manager.test_connections()
+                
+                if test_results['sqlalchemy']:
+                    st.success("✅ Database connection working!")
+                else:
+                    st.error("❌ Database connection failed!")
+                
+                for error in test_results['errors']:
+                    st.error(f"🔍 {error}")
         
         # System info
         st.markdown("---")
-        st.caption("🐳 Running in Docker")
-        st.caption(f"📁 Data: {DATA_DIR}")
+        st.caption("🐳 Using PostgreSQL Database (SQLAlchemy)")
+        st.caption(f"🗄️ Database: {db_config['host']}:{db_config['port']}")
+        st.caption(f"📁 Keywords: {DATA_DIR}")
         
         # Keywords info
         brands = st.session_state.keyword_manager.get_available_brands()
@@ -1218,8 +1374,8 @@ def main():
                     st.info("Select a record to edit")
         
         else:
-            st.error("❌ Could not load Excel file")
-            st.info("💡 Ensure your Excel file is mounted in the data directory")
+            st.error("❌ Could not load data from database")
+            st.info("💡 Please check database connection and ensure table exists")
     
     with tab2:
         st.subheader("✅ Fixed Records")
@@ -1323,8 +1479,8 @@ def main():
                     if st.session_state.get('fixed_selected_row'):
                         st.markdown("---")
                         if st.button("🔄 Unfix This Record", type="secondary", use_container_width=True, key="fixed_unfix_single_btn"):
-                            success_count = st.session_state.data_manager.bulk_unfix_records([st.session_state.fixed_selected_row['_index']])
-                            if success_count > 0:
+                            success = st.session_state.data_manager.unfix_record(st.session_state.fixed_selected_row['_index'])
+                            if success:
                                 st.success("✅ Record moved back to unfixed!")
                                 st.session_state.fixed_selected_row = None
                                 st.rerun()
@@ -1391,7 +1547,7 @@ def main():
             st.info("🗑️ **ลบข้อมูล**\nลบข้อมูลที่ไม่ต้องการพร้อมระบบยืนยัน")
         with col3:
             st.info("📊 **ติดตามสถานะ**\nแยกข้อมูลที่แก้ไขแล้วและยังไม่แก้ไข")
-            st.info("🔄 **คืนค่าก่อนแก้ไข**\nสามารถกดคืนค่าข้อมูลที่แก้ไขผิดได้")
+            st.info("🔄 **คืนค่าขก่อนแก้ไข**\nสามารถกดคืนค่าข้อมูลที่แก้ไขผิดได้")
         
         st.markdown("---")
         
@@ -1423,7 +1579,7 @@ def main():
             
             st.write("**🔄 ขั้นตอนที่ 5: คืนค่าการแก้ไข**")
             st.write("• **Unfixed Selected:** คืนค่าการแก้ไขข้อมูล")
-            st.write("• **Multiple Select:** คืนค่าได้หลายแถวพร้อมกัน")
+            st.write("• **Single Record:** คืนค่าได้ทีละแถว")
             
             st.write("**⚠️ ข้อควรระวัง**")
             st.warning("• **การลบข้อมูล:** ไม่สามารถกู้คืนได้")
@@ -1478,7 +1634,7 @@ def main():
             st.write("• ระบุหมายเลขแถวที่มีปัญหา")
             st.write("• **096-982-2813 (อู๋)**")
         
-        st.success("🎉 เสร็จสิ้น! คุณพร้อมใช้งานระบบ Back Office Matching v1.1 แล้ว!")
+        st.success("🎉 เสร็จสิ้น! คุณพร้อมใช้งานระบบ Back Office Matching v1.6 (PostgreSQL) แล้ว!")
 
 if __name__ == "__main__":
     main()
