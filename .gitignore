@@ -5,7 +5,6 @@ Customer_Loan_Updated_*.xlsx
 KEYWORD_DATABASE_MIGRATION.md
 load_keywords_to_db.py
 migrate_keywords.py
-__init__.py
 
 # Python cache
 __pycache__/

@@ -24,10 +24,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app.py app.py
-
+COPY *.py ./
 # Copy brand keywords and sample data
-COPY BRAND_KEYWORDS/ BRAND_KEYWORDS/
-COPY Customer_Loan_2025_06_07.xlsx Customer_Loan_2025_06_07.xlsx
+#COPY BRAND_KEYWORDS/ BRAND_KEYWORDS/
+#COPY Customer_Loan_2025_06_07.xlsx Customer_Loan_2025_06_07.xlsx
 
 # Create data directory for mounted volumes
 RUN mkdir -p /app/data
