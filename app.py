@@ -149,53 +149,6 @@ class DataManager:
             self.unfixed_records = set(self.data_cache.index) if self.data_cache is not None else set()
             self.fixed_records = set()
     
-    def save_to_database(self):
-        """Save current data back to database using SQLAlchemy - ONLY for bulk operations like export/reset"""
-        if self.data_cache is not None:
-            try:
-                engine = self.get_engine()
-                if engine is None:
-                    return False
-                
-                # Update records individually using SQLAlchemy with proper transaction handling
-                with engine.begin() as conn:  # Use begin() for automatic transaction management
-                    for index, row in self.data_cache.iterrows():
-                        # Map app columns back to database columns
-                        form_id = row.get('Form_ids', row.get('form_id'))
-                        
-                        # Prepare update values, mapping app columns to DB columns
-                        update_sql = text(f"""
-                        UPDATE {self.table_name} 
-                        SET contract_num = :contract_num, type = :type, brand = :brand, model = :model, 
-                            sub_model = :sub_model, size = :size, color = :color, hardware = :hardware, 
-                            material = :material, picture_url = :picture_url, status = :status
-                        WHERE form_id = :form_id
-                        """)
-                        
-                        conn.execute(update_sql, {
-                            'contract_num': row.get('Contract_Numbers'),
-                            'type': row.get('Types'),
-                            'brand': row.get('Brands'),
-                            'model': row.get('Models'),
-                            'sub_model': row.get('Sub-Models'),
-                            'size': row.get('Sizes'),
-                            'color': row.get('Colors'),
-                            'hardware': row.get('Hardwares'),
-                            'material': row.get('Materials'),
-                            'picture_url': row.get('Picture_url'),
-                            'status': int(row.get('Status', 0)),  # Ensure status is int
-                            'form_id': int(form_id)  # Ensure form_id is int
-                        })
-                
-                return True
-                
-            except Exception as e:
-                st.error(f"❌ Error saving to database: {e}")
-                return False
-        return False
-    
-
-
     def save_single_record(self, index):
         """Update only one specific record in the database - OPTIMIZED for single changes"""
         if self.data_cache is not None and index in self.data_cache.index:
@@ -355,16 +308,6 @@ class DataManager:
                 st.error(f"❌ Error exporting to Excel: {e}")
                 return None
         return None
-    
-    def reset_tracking(self):
-        """Reset all tracking data"""
-        if self.data_cache is not None:
-            self.fixed_records = set()
-            self.unfixed_records = set(self.data_cache.index)
-            self.data_cache['Status'] = 0
-            self.save_to_database()
-            return True
-        return False
 
 class KeywordManager:
     def __init__(self, keywords_dir=KEYWORDS_DIR):
@@ -1181,15 +1124,6 @@ def main():
             else:
                 st.error("❌ Export failed")
         
-        # Reset option
-        with st.expander("⚠️ Advanced Options"):
-            if st.button("🔄 Reset All Status", type="secondary"):
-                if st.session_state.data_manager.reset_tracking():
-                    st.success("✅ All records reset to unfixed")
-                    st.rerun()
-                else:
-                    st.error("❌ Reset failed")
-            
             # Connection test
             if st.button("🔧 Test Database Connection", help="Test SQLAlchemy database connection"):
                 test_results = st.session_state.data_manager.test_connections()
