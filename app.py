@@ -617,7 +617,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
         st.session_state.form_state['type'] = selected_type
     
     # Brand dropdown
-    brands = [''] + keyword_manager.get_available_brands()
+    brands = [''] + sorted(keyword_manager.get_available_brands())
     brand_idx = 0
     if st.session_state.form_state['brand'] in brands:
         brand_idx = brands.index(st.session_state.form_state['brand'])
@@ -641,7 +641,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
     if selected_brand:
         brand_data = keyword_manager.get_brand_data(selected_brand)
         if brand_data:
-            models.extend([key for key in brand_data.keys() if key not in ['colors', 'hardwares']])
+            models.extend(sorted([key for key in brand_data.keys() if key not in ['colors', 'hardwares']]))
     
     model_idx = 0
     if st.session_state.form_state['model'] in models:
@@ -667,7 +667,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
         if brand_data and selected_model in brand_data:
             model_data = brand_data[selected_model]
             if isinstance(model_data, dict):
-                submodels.extend(list(model_data.keys()))
+                submodels.extend(sorted(list(model_data.keys())))
     
     submodel_idx = 0
     if st.session_state.form_state['submodel'] in submodels:
@@ -716,7 +716,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
                 
                 submodel_data = brand_data[selected_model][selected_submodel]
                 if isinstance(submodel_data, dict) and 'sizes' in submodel_data:
-                    sizes.extend(submodel_data['sizes'])
+                    sizes.extend(sorted(submodel_data['sizes']))
         
         size_idx = 0
         if st.session_state.form_state['size'] in sizes:
@@ -749,7 +749,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
             
             submodel_data = brand_data[selected_model][selected_submodel]
             if isinstance(submodel_data, dict) and 'materials' in submodel_data:
-                materials.extend(submodel_data['materials'])
+                materials.extend(sorted(submodel_data['materials']))
     
     material_idx = 0
     if st.session_state.form_state['material'] in materials:
@@ -766,7 +766,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
         st.session_state.form_state['material'] = selected_material
     
     # Color dropdown
-    colors = [''] + keyword_manager.get_brand_colors(selected_brand)
+    colors = [''] + sorted(keyword_manager.get_brand_colors(selected_brand))
     color_idx = 0
     if st.session_state.form_state['color'] in colors:
         color_idx = colors.index(st.session_state.form_state['color'])
@@ -782,7 +782,7 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
         st.session_state.form_state['color'] = selected_color
     
     # Hardware dropdown
-    hardwares = [''] + keyword_manager.get_brand_hardwares(selected_brand)
+    hardwares = [''] + sorted(keyword_manager.get_brand_hardwares(selected_brand))
     hardware_idx = 0
     if st.session_state.form_state['hardware'] in hardwares:
         hardware_idx = hardwares.index(st.session_state.form_state['hardware'])
@@ -913,7 +913,7 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
         st.session_state.fixed_form_state['type'] = selected_type
     
     # Brand dropdown
-    brands = [''] + keyword_manager.get_available_brands()
+    brands = [''] + sorted(keyword_manager.get_available_brands())
     brand_idx = 0
     if st.session_state.fixed_form_state['brand'] in brands:
         brand_idx = brands.index(st.session_state.fixed_form_state['brand'])
@@ -937,7 +937,7 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
     if selected_brand:
         brand_data = keyword_manager.get_brand_data(selected_brand)
         if brand_data:
-            models.extend([key for key in brand_data.keys() if key not in ['colors', 'hardwares']])
+            models.extend(sorted([key for key in brand_data.keys() if key not in ['colors', 'hardwares']]))
     
     model_idx = 0
     if st.session_state.fixed_form_state['model'] in models:
@@ -963,7 +963,7 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
         if brand_data and selected_model in brand_data:
             model_data = brand_data[selected_model]
             if isinstance(model_data, dict):
-                submodels.extend(list(model_data.keys()))
+                submodels.extend(sorted(list(model_data.keys())))
     
     submodel_idx = 0
     if st.session_state.fixed_form_state['submodel'] in submodels:
@@ -1012,7 +1012,7 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
                 
                 submodel_data = brand_data[selected_model][selected_submodel]
                 if isinstance(submodel_data, dict) and 'sizes' in submodel_data:
-                    sizes.extend(submodel_data['sizes'])
+                    sizes.extend(sorted(submodel_data['sizes']))
         
         size_idx = 0
         if st.session_state.fixed_form_state['size'] in sizes:
@@ -1045,7 +1045,7 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
             
             submodel_data = brand_data[selected_model][selected_submodel]
             if isinstance(submodel_data, dict) and 'materials' in submodel_data:
-                materials.extend(submodel_data['materials'])
+                materials.extend(sorted(submodel_data['materials']))
     
     material_idx = 0
     if st.session_state.fixed_form_state['material'] in materials:
@@ -1062,7 +1062,7 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
         st.session_state.fixed_form_state['material'] = selected_material
     
     # Color dropdown
-    colors = [''] + keyword_manager.get_brand_colors(selected_brand)
+    colors = [''] + sorted(keyword_manager.get_brand_colors(selected_brand))
     color_idx = 0
     if st.session_state.fixed_form_state['color'] in colors:
         color_idx = colors.index(st.session_state.fixed_form_state['color'])
@@ -1078,7 +1078,7 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
         st.session_state.fixed_form_state['color'] = selected_color
     
     # Hardware dropdown
-    hardwares = [''] + keyword_manager.get_brand_hardwares(selected_brand)
+    hardwares = [''] + sorted(keyword_manager.get_brand_hardwares(selected_brand))
     hardware_idx = 0
     if st.session_state.fixed_form_state['hardware'] in hardwares:
         hardware_idx = hardwares.index(st.session_state.fixed_form_state['hardware'])
