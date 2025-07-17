@@ -497,26 +497,65 @@ def create_filters(df):
     
     with col2:
         if 'Types' in df.columns:
-            unique_types = ['All'] + sorted([str(x) for x in df['Types'].dropna().unique() if str(x) != 'nan'])
+            # Filter by status and form_id_search first, then get unique types
+            status_filtered_df = df.copy()
+            if filters['status'] == "✅ Fixed" and 'Status' in df.columns:
+                status_filtered_df = status_filtered_df[status_filtered_df['Status'] == 1]
+            elif filters['status'] == "❌ Unfixed" and 'Status' in df.columns:
+                status_filtered_df = status_filtered_df[status_filtered_df['Status'] == 0]
+            
+            # Apply form ID search if provided
+            if filters.get('form_id_search', '').strip() and 'Form_ids' in df.columns:
+                search_term = filters['form_id_search'].strip()
+                status_filtered_df = status_filtered_df[
+                    status_filtered_df['Form_ids'].astype(str).str.lower() == search_term.lower()
+                ]
+            
+            unique_types = ['All'] + sorted([str(x) for x in status_filtered_df['Types'].dropna().unique() if str(x) != 'nan'])
             filters['type'] = st.selectbox("Type", unique_types, key="filter_type")
         else:
             filters['type'] = "All"
     
     with col3:
         if 'Brands' in df.columns and 'Types' in df.columns:
-            if filters['type'] == "All":
-                unique_brands = ['All'] + sorted([str(x) for x in df['Brands'].dropna().unique() if str(x) != 'nan'])
-            else:
-                type_filtered_df = df[df['Types'].astype(str) == filters['type']]
-                unique_brands = ['All'] + sorted([str(x) for x in type_filtered_df['Brands'].dropna().unique() if str(x) != 'nan'])
+            # Filter by status, form_id_search, then by type
+            brand_filtered_df = df.copy()
+            if filters['status'] == "✅ Fixed" and 'Status' in df.columns:
+                brand_filtered_df = brand_filtered_df[brand_filtered_df['Status'] == 1]
+            elif filters['status'] == "❌ Unfixed" and 'Status' in df.columns:
+                brand_filtered_df = brand_filtered_df[brand_filtered_df['Status'] == 0]
             
+            # Apply form ID search if provided
+            if filters.get('form_id_search', '').strip() and 'Form_ids' in df.columns:
+                search_term = filters['form_id_search'].strip()
+                brand_filtered_df = brand_filtered_df[
+                    brand_filtered_df['Form_ids'].astype(str).str.lower() == search_term.lower()
+                ]
+            
+            if filters['type'] != "All":
+                brand_filtered_df = brand_filtered_df[brand_filtered_df['Types'].astype(str) == filters['type']]
+            
+            unique_brands = ['All'] + sorted([str(x) for x in brand_filtered_df['Brands'].dropna().unique() if str(x) != 'nan'])
             filters['brand'] = st.selectbox("Brand", unique_brands, key="filter_brand")
         else:
             filters['brand'] = "All"
     
     with col4:
         if 'Sub-Models' in df.columns and 'Types' in df.columns and 'Brands' in df.columns:
+            # Filter by status, form_id_search, then by type, then by brand
             filtered_for_submodel = df.copy()
+            
+            if filters['status'] == "✅ Fixed" and 'Status' in df.columns:
+                filtered_for_submodel = filtered_for_submodel[filtered_for_submodel['Status'] == 1]
+            elif filters['status'] == "❌ Unfixed" and 'Status' in df.columns:
+                filtered_for_submodel = filtered_for_submodel[filtered_for_submodel['Status'] == 0]
+            
+            # Apply form ID search if provided
+            if filters.get('form_id_search', '').strip() and 'Form_ids' in df.columns:
+                search_term = filters['form_id_search'].strip()
+                filtered_for_submodel = filtered_for_submodel[
+                    filtered_for_submodel['Form_ids'].astype(str).str.lower() == search_term.lower()
+                ]
             
             if filters['type'] != "All":
                 filtered_for_submodel = filtered_for_submodel[filtered_for_submodel['Types'].astype(str) == filters['type']]
