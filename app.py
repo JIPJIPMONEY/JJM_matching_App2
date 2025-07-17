@@ -497,7 +497,7 @@ def create_filters(df):
     
     with col2:
         if 'Types' in df.columns:
-            # Filter by status and form_id_search first, then get unique types
+            # Filter by status, form_id_search, and contract first, then get unique types
             status_filtered_df = df.copy()
             if filters['status'] == "✅ Fixed" and 'Status' in df.columns:
                 status_filtered_df = status_filtered_df[status_filtered_df['Status'] == 1]
@@ -511,6 +511,12 @@ def create_filters(df):
                     status_filtered_df['Form_ids'].astype(str).str.lower() == search_term.lower()
                 ]
             
+            # Apply contract filter
+            if filters.get('contract') == "Not Empty" and 'Contract_Numbers' in df.columns:
+                status_filtered_df = status_filtered_df[status_filtered_df['Contract_Numbers'].notna()]
+            elif filters.get('contract') == "Empty" and 'Contract_Numbers' in df.columns:
+                status_filtered_df = status_filtered_df[status_filtered_df['Contract_Numbers'].isna()]
+            
             unique_types = ['All'] + sorted([str(x) for x in status_filtered_df['Types'].dropna().unique() if str(x) != 'nan'])
             filters['type'] = st.selectbox("Type", unique_types, key="filter_type")
         else:
@@ -518,7 +524,7 @@ def create_filters(df):
     
     with col3:
         if 'Brands' in df.columns and 'Types' in df.columns:
-            # Filter by status, form_id_search, then by type
+            # Filter by status, form_id_search, contract, then by type
             brand_filtered_df = df.copy()
             if filters['status'] == "✅ Fixed" and 'Status' in df.columns:
                 brand_filtered_df = brand_filtered_df[brand_filtered_df['Status'] == 1]
@@ -532,6 +538,12 @@ def create_filters(df):
                     brand_filtered_df['Form_ids'].astype(str).str.lower() == search_term.lower()
                 ]
             
+            # Apply contract filter
+            if filters.get('contract') == "Not Empty" and 'Contract_Numbers' in df.columns:
+                brand_filtered_df = brand_filtered_df[brand_filtered_df['Contract_Numbers'].notna()]
+            elif filters.get('contract') == "Empty" and 'Contract_Numbers' in df.columns:
+                brand_filtered_df = brand_filtered_df[brand_filtered_df['Contract_Numbers'].isna()]
+            
             if filters['type'] != "All":
                 brand_filtered_df = brand_filtered_df[brand_filtered_df['Types'].astype(str) == filters['type']]
             
@@ -542,7 +554,7 @@ def create_filters(df):
     
     with col4:
         if 'Sub-Models' in df.columns and 'Types' in df.columns and 'Brands' in df.columns:
-            # Filter by status, form_id_search, then by type, then by brand
+            # Filter by status, form_id_search, contract, then by type, then by brand
             filtered_for_submodel = df.copy()
             
             if filters['status'] == "✅ Fixed" and 'Status' in df.columns:
@@ -556,6 +568,12 @@ def create_filters(df):
                 filtered_for_submodel = filtered_for_submodel[
                     filtered_for_submodel['Form_ids'].astype(str).str.lower() == search_term.lower()
                 ]
+            
+            # Apply contract filter
+            if filters.get('contract') == "Not Empty" and 'Contract_Numbers' in df.columns:
+                filtered_for_submodel = filtered_for_submodel[filtered_for_submodel['Contract_Numbers'].notna()]
+            elif filters.get('contract') == "Empty" and 'Contract_Numbers' in df.columns:
+                filtered_for_submodel = filtered_for_submodel[filtered_for_submodel['Contract_Numbers'].isna()]
             
             if filters['type'] != "All":
                 filtered_for_submodel = filtered_for_submodel[filtered_for_submodel['Types'].astype(str) == filters['type']]
