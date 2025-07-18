@@ -115,20 +115,29 @@ class DataManager:
         self.table_name = "jjm_customer_loan"  # Your existing table name
         self.engine = None
         
+    # ...existing code...
     def get_engine(self):
-        """Create SQLAlchemy engine for all database operations"""
+        """Create SQLAlchemy engine with connection pooling for better performance"""
         if self.engine is None:
             try:
-                # Create PostgreSQL connection string for SQLAlchemy
                 connection_string = (
                     f"postgresql://{self.db_config['user']}:{self.db_config['password']}"
                     f"@{self.db_config['host']}:{self.db_config['port']}/{self.db_config['database']}"
                 )
-                self.engine = create_engine(connection_string)
+                # Add connection pooling and performance optimizations
+                self.engine = create_engine(
+                    connection_string,
+                    pool_size=10,          # Number of connections to maintain
+                    max_overflow=20,       # Additional connections when needed
+                    pool_pre_ping=True,    # Verify connections before use
+                    pool_recycle=3600,     # Recycle connections every hour
+                    echo=False             # Set to True for debugging SQL queries
+                )
             except Exception as e:
                 st.error(f"❌ SQLAlchemy engine creation failed: {str(e)}")
                 return None
         return self.engine
+    # ...existing code...
     
     #def test_connections(self):
         #"""Test SQLAlchemy connection"""
@@ -150,16 +159,49 @@ class DataManager:
         #return test_results
     
     def load_data(self):
-        """Load data from PostgreSQL database using SQLAlchemy"""
+        """Load data from PostgreSQL database using SQLAlchemy with optimizations"""
         try:
             if self.data_cache is None:
+                # Add progress indicator
+                progress_bar = st.progress(0)
+                status_text = st.empty()
+                
+                status_text.text("Connecting to database...")
+                progress_bar.progress(0.1)
+                
                 engine = self.get_engine()
                 if engine is None:
+                    progress_bar.empty()
+                    status_text.empty()
                     return None
                 
-                # Load data from existing table using SQLAlchemy engine
+                status_text.text("Executing query...")
+                progress_bar.progress(0.3)
+                
+                # Load data in chunks for better performance
                 query = text(f"SELECT * FROM {self.table_name} ORDER BY form_id")
-                self.data_cache = pd.read_sql_query(query, engine)
+                
+                chunk_size = 10000
+                chunks = []
+                
+                with engine.connect() as conn:
+                    result = conn.execute(query)
+                    while True:
+                        chunk = result.fetchmany(chunk_size)
+                        if not chunk:
+                            break
+                        chunks.append(pd.DataFrame(chunk))
+                        status_text.text(f"Loading data... {len(chunks)} chunks processed")
+                        progress_bar.progress(min(0.7, 0.3 + (len(chunks) * 0.1)))
+                
+                status_text.text("Processing data...")
+                progress_bar.progress(0.8)
+                
+                # Combine all chunks
+                if chunks:
+                    self.data_cache = pd.concat(chunks, ignore_index=True)
+                else:
+                    self.data_cache = pd.DataFrame()
                 
                 # Map your database columns to the app's expected column names
                 column_mapping = {
@@ -179,43 +221,51 @@ class DataManager:
                     'updated_at': 'Updated_at'
                 }
                 
-                # Rename columns to match existing app expectations
-                for db_col, app_col in column_mapping.items():
-                    if db_col in self.data_cache.columns:
-                        self.data_cache = self.data_cache.rename(columns={db_col: app_col})
+                # Rename columns efficiently
+                self.data_cache = self.data_cache.rename(columns=column_mapping)
                 
-                # Ensure Status column exists and has default values
-                if 'Status' not in self.data_cache.columns:
-                    self.data_cache['Status'] = 0
-                    st.info("📋 Added Status column with default values")
-                else:
-                    # Handle NULL values in status column
-                    self.data_cache['Status'] = self.data_cache['Status'].fillna(0)
+                # Handle missing columns and null values efficiently
+                self._prepare_data_columns()
                 
-                # Ensure Editor column exists
-                if 'Editor' not in self.data_cache.columns:
-                    self.data_cache['Editor'] = ''
-                    st.info("📋 Added Editor column")
-                else:
-                    # Handle NULL values in editor column
-                    self.data_cache['Editor'] = self.data_cache['Editor'].fillna('')
-                
-                # Ensure Updated_at column exists and handle NULL values
-                if 'Updated_at' not in self.data_cache.columns:
-                    # Create the column if it doesn't exist
-                    self.data_cache['Updated_at'] = pd.NaT
-                    st.info("📋 Added Updated_at column")
-                else:
-                    # Convert to datetime and handle NULL values
-                    self.data_cache['Updated_at'] = pd.to_datetime(self.data_cache['Updated_at'], errors='coerce')
+                progress_bar.progress(0.9)
                 
                 # Load tracking data from Status column
                 self.load_tracking_from_status()
+                
+                progress_bar.progress(1.0)
+                status_text.text("Data loaded successfully!")
+                
+                # Clean up progress indicators
+                import time
+                time.sleep(0.5)
+                progress_bar.empty()
+                status_text.empty()
                         
             return self.data_cache
         except Exception as e:
             st.error(f"❌ Error loading data from database: {str(e)}")
             return None
+    
+    def _prepare_data_columns(self):
+        """Prepare data columns efficiently"""
+        # Handle Status column
+        if 'Status' not in self.data_cache.columns:
+            self.data_cache['Status'] = 0
+        else:
+            self.data_cache['Status'] = self.data_cache['Status'].fillna(0).astype(int)
+        
+        # Handle Editor column
+        if 'Editor' not in self.data_cache.columns:
+            self.data_cache['Editor'] = ''
+        else:
+            self.data_cache['Editor'] = self.data_cache['Editor'].fillna('')
+        
+        # Handle Updated_at column
+        if 'Updated_at' not in self.data_cache.columns:
+            self.data_cache['Updated_at'] = pd.NaT
+        else:
+            self.data_cache['Updated_at'] = pd.to_datetime(self.data_cache['Updated_at'], errors='coerce')
+    # ...existing code...
     
     def load_tracking_from_status(self):
         """Load tracking data from the Status column"""
@@ -553,18 +603,20 @@ class KeywordManager:
             
             from models import Brand, Model, ModelSize, ModelMaterial, BrandColor, BrandHardware
             from sqlalchemy.orm import joinedload
-            
+            from sqlalchemy.orm import selectinload
             # Clear cache before reloading
             self.brands_cache = {}
             self.global_data = {}
             
             # Load all brands with their related data
+            # ...existing code...
             brands = self.session.query(Brand).options(
-                joinedload(Brand.models).joinedload(Model.sizes),
-                joinedload(Brand.models).joinedload(Model.materials),
-                joinedload(Brand.colors),
-                joinedload(Brand.hardwares)
+                selectinload(Brand.models).selectinload(Model.sizes),
+                selectinload(Brand.models).selectinload(Model.materials),
+                selectinload(Brand.colors),
+                selectinload(Brand.hardwares)
             ).all()
+            # ...existing code...
             
             # Cache brand data in the same format as JSON-based system
             for brand in brands:
@@ -1415,12 +1467,12 @@ if 'authenticated' not in st.session_state:
 if 'username' not in st.session_state:
     st.session_state.username = None
 
-if 'data_manager' not in st.session_state:
-    st.session_state.data_manager = DataManager()
+# if 'data_manager' not in st.session_state:
+#     st.session_state.data_manager = DataManager()
 
-if 'keyword_manager' not in st.session_state:
-    # Initialize keyword manager only once
-    st.session_state.keyword_manager = KeywordManager()
+# if 'keyword_manager' not in st.session_state:
+#     # Initialize keyword manager only once
+#     st.session_state.keyword_manager = KeywordManager()
 
 if 'selected_row' not in st.session_state:
     st.session_state.selected_row = None
@@ -1440,6 +1492,12 @@ if 'show_fixed_delete_popup' not in st.session_state:
 # Main app
 def main():
     # Check authentication first
+    if 'data_manager' not in st.session_state:
+        st.session_state.data_manager = DataManager()
+
+    if 'keyword_manager' not in st.session_state:
+        # Initialize keyword manager only once
+        st.session_state.keyword_manager = KeywordManager()
     if not st.session_state.get('authenticated', False):
         show_login_page()
         return
