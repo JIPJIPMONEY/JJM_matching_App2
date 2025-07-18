@@ -158,88 +158,83 @@ class DataManager:
         
         #return test_results
     
-    def load_data(self):
-        """Load data from PostgreSQL database using SQLAlchemy with optimizations"""
+    def load_data(self, page_size=None, offset=0, smart_load=True):
+        """Load data from PostgreSQL database using SQLAlchemy - OPTIMIZED"""
         try:
             if self.data_cache is None:
-                # Add progress indicator
-                progress_bar = st.progress(0)
-                status_text = st.empty()
-                
-                status_text.text("Connecting to database...")
-                progress_bar.progress(0.1)
+                st.info("🔄 Loading data for the first time...")
                 
                 engine = self.get_engine()
                 if engine is None:
-                    progress_bar.empty()
-                    status_text.empty()
                     return None
                 
-                status_text.text("Executing query...")
-                progress_bar.progress(0.3)
+                # 🚀 Smart Loading Feature
+                if smart_load and page_size is None:
+                    # เช็คจำนวนข้อมูลทั้งหมดก่อน
+                    count_query = text(f"SELECT COUNT(*) FROM {self.table_name}")
+                    total_records = pd.read_sql_query(count_query, engine).iloc[0, 0]
+                    
+                    st.info(f"📊 Found {total_records:,} records in database")
+                    
+                    # ถ้าข้อมูลมากกว่า 10000 ตัว ให้เตือนและให้เลือก
+                    if total_records > 10000:
+                        st.warning(f"⚠️ Database contains {total_records:,} records. Loading all may take time...")
+                        
+                        # แสดงตัวเลือก
+                        with st.expander("🔧 Choose loading method", expanded=True):
+                            col1, col2 = st.columns(2)
+                            
+                            with col1:
+                                load_all = st.checkbox("Load all records", value=False)
+                            
+                            with col2:
+                                if not load_all:
+                                    suggested_limit = min(5000, total_records)
+                                    limit = st.number_input(
+                                        "Load how many records?",
+                                        min_value=1000,
+                                        max_value=total_records,
+                                        value=suggested_limit,
+                                        step=1000
+                                    )
+                            
+                            if st.button("🚀 Load Data"):
+                                if load_all:
+                                    page_size = None  # Load all
+                                else:
+                                    page_size = limit
+                            else:
+                                # Don't load anything yet, wait for user choice
+                                return None
                 
-                # Load data in chunks for better performance
-                query = text(f"SELECT * FROM {self.table_name} ORDER BY form_id")
-                
-                chunk_size = 10000
-                chunks = []
-                
-                with engine.connect() as conn:
-                    result = conn.execute(query)
-                    while True:
-                        chunk = result.fetchmany(chunk_size)
-                        if not chunk:
-                            break
-                        chunks.append(pd.DataFrame(chunk))
-                        status_text.text(f"Loading data... {len(chunks)} chunks processed")
-                        progress_bar.progress(min(0.7, 0.3 + (len(chunks) * 0.1)))
-                
-                status_text.text("Processing data...")
-                progress_bar.progress(0.8)
-                
-                # Combine all chunks
-                if chunks:
-                    self.data_cache = pd.concat(chunks, ignore_index=True)
+                # 🚀 แก้ไข query ให้โหลดทั้งหมด
+                if page_size is None:
+                    # โหลดทั้งหมดโดยไม่จำกัด
+                    query = text(f"""
+                        SELECT form_id, contract_num, type, brand, model, sub_model, 
+                            size, color, hardware, material, picture_url, 
+                            status, editor, updated_at 
+                        FROM {self.table_name} 
+                        ORDER BY form_id
+                    """)
+                    
+                    self.data_cache = pd.read_sql_query(query, engine)
                 else:
-                    self.data_cache = pd.DataFrame()
-                
-                # Map your database columns to the app's expected column names
-                column_mapping = {
-                    'form_id': 'Form_ids',
-                    'contract_num': 'Contract_Numbers', 
-                    'type': 'Types',
-                    'brand': 'Brands',
-                    'model': 'Models',
-                    'sub_model': 'Sub-Models',
-                    'size': 'Sizes',
-                    'color': 'Colors',
-                    'hardware': 'Hardwares',
-                    'material': 'Materials',
-                    'picture_url': 'Picture_url',
-                    'status': 'Status',
-                    'editor': 'Editor',
-                    'updated_at': 'Updated_at'
-                }
-                
-                # Rename columns efficiently
-                self.data_cache = self.data_cache.rename(columns=column_mapping)
-                
-                # Handle missing columns and null values efficiently
-                self._prepare_data_columns()
-                
-                progress_bar.progress(0.9)
-                
-                # Load tracking data from Status column
-                self.load_tracking_from_status()
-                
-                progress_bar.progress(1.0)
-                status_text.text("Data loaded successfully!")
-                
-                # Clean up progress indicators
-                import time
-                time.sleep(0.5)
-                progress_bar.empty()
-                status_text.empty()
+                    # โหลดแบบจำกัด
+                    query = text(f"""
+                        SELECT form_id, contract_num, type, brand, model, sub_model, 
+                            size, color, hardware, material, picture_url, 
+                            status, editor, updated_at 
+                        FROM {self.table_name} 
+                        ORDER BY form_id 
+                        LIMIT :limit OFFSET :offset
+                    """)
+                    
+                    self.data_cache = pd.read_sql_query(
+                        query, 
+                        engine, 
+                        params={'limit': page_size, 'offset': offset}
+                    )
                         
             return self.data_cache
         except Exception as e:
