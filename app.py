@@ -478,8 +478,8 @@ class DataManager:
                         count = user_counts.get(user, 0)
                         progress_data[user] = {
                             'count': count,
-                            'target': 300,
-                            'percentage': min(100, (count / 300) * 100)
+                            'target': 50,
+                            'percentage': min(100, (count / 50) * 100)
                         }
                         
             except Exception as e:
@@ -491,7 +491,7 @@ class DataManager:
                         if user and user.strip() and user != "admin":
                             progress_data[user] = {
                                 'count': 0,
-                                'target': 300,
+                                'target': 50,
                                 'percentage': 0
                             }
                 except:
@@ -1508,11 +1508,11 @@ def main():
                 # Show detailed stats
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.caption(f"{progress_color} {count}/300")
+                    st.caption(f"{progress_color} {count}/50")
                 with col2:
                     st.caption(f"{percentage:.1f}%")
                 
-                if count == 300:
+                if count == 50:
                     st.caption("✅ Target achieved!")
         else:
             st.info("No user activity data available for today.")
