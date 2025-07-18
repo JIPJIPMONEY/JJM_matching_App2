@@ -39,7 +39,25 @@ docker-compose up --build
 - The app will automatically open in your browser after ~30 seconds
 - Or manually go to: **http://localhost:8501**
 
-## 🛠️ Troubleshooting
+## � Local Development (Alternative)
+
+If you want to run the app directly without Docker:
+
+### Prerequisites
+```powershell
+# Install Python dependencies
+pip install -r requirements.txt
+```
+
+### Run the App
+```powershell
+# Windows PowerShell
+streamlit run app.py
+```
+
+The app will start on: **http://localhost:8501**
+
+## �🛠️ Troubleshooting
 
 ### Quick System Check:
 ```batch

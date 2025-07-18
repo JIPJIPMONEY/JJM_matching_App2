@@ -11,18 +11,83 @@ from sqlalchemy import create_engine, text
 from urllib.parse import urlparse
 import requests
 from PIL import Image
+import hashlib
+
+# Authentication configuration
+USER_CREDENTIALS = {
+    "admin": "admin8558",
+    "Build@CS": "NRJ24017", 
+    "Pin@SCL": "NRJ23006",
+    "Knight@SCL": "NRJ23004",
+    "Gun@SCL":"NRJ24027"
+}
+
+def hash_password(password):
+    """Simple password hashing"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(stored_password, provided_password):
+    """Verify a password against its hash"""
+    return stored_password == provided_password
+
+def authenticate_user(username, password):
+    """Authenticate user credentials"""
+    if username in USER_CREDENTIALS:
+        return verify_password(USER_CREDENTIALS[username], password)
+    return False
+
+def show_login_page():
+    """Display login page"""
+    st.title("🔐 Login Required")
+    st.subheader("Back Office Matching v2.0")
+    
+    # Center the login form
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        
+        with st.form("login_form"):
+            username = st.text_input("👤 Username")
+            password = st.text_input("🔒 Password", type="password")
+            login_button = st.form_submit_button("🚀 Login", use_container_width=True)
+            
+            if login_button:
+                if authenticate_user(username, password):
+                    st.session_state.authenticated = True
+                    st.session_state.username = username
+                    st.success(f"✅ Welcome, {username}!")
+                    st.rerun()
+                else:
+                    st.error("❌ Invalid username or password")
+
+def logout():
+    """Logout function"""
+    st.session_state.authenticated = False
+    st.session_state.username = None
+    if 'data_manager' in st.session_state:
+        del st.session_state.data_manager
+    if 'keyword_manager' in st.session_state:
+        del st.session_state.keyword_manager
+    st.rerun()
 
 # Import database models and managers
 from models import Base, Brand, Model, ModelSize, ModelMaterial, BrandColor, BrandHardware, create_tables
 from database_keyword_manager import DatabaseKeywordManager
 
 # Configure page
-st.set_page_config(
-    page_title="Back office matching v2.0",
-    page_icon="🏦",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+if not st.session_state.get('authenticated', False):
+    st.set_page_config(
+        page_title="Login - Back Office Matching v2.0",
+        page_icon="🔐",
+        layout="centered"
+    )
+else:
+    st.set_page_config(
+        page_title="Back office matching v2.0",
+        page_icon="🏦",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
 
 # Database configuration
 db_config = {
@@ -109,7 +174,9 @@ class DataManager:
                     'hardware': 'Hardwares',
                     'material': 'Materials',
                     'picture_url': 'Picture_url',
-                    'status': 'Status'
+                    'status': 'Status',
+                    'editor': 'Editor',
+                    'updated_at': 'Updated_at'
                 }
                 
                 # Rename columns to match existing app expectations
@@ -124,6 +191,23 @@ class DataManager:
                 else:
                     # Handle NULL values in status column
                     self.data_cache['Status'] = self.data_cache['Status'].fillna(0)
+                
+                # Ensure Editor column exists
+                if 'Editor' not in self.data_cache.columns:
+                    self.data_cache['Editor'] = ''
+                    st.info("📋 Added Editor column")
+                else:
+                    # Handle NULL values in editor column
+                    self.data_cache['Editor'] = self.data_cache['Editor'].fillna('')
+                
+                # Ensure Updated_at column exists and handle NULL values
+                if 'Updated_at' not in self.data_cache.columns:
+                    # Create the column if it doesn't exist
+                    self.data_cache['Updated_at'] = pd.NaT
+                    st.info("📋 Added Updated_at column")
+                else:
+                    # Convert to datetime and handle NULL values
+                    self.data_cache['Updated_at'] = pd.to_datetime(self.data_cache['Updated_at'], errors='coerce')
                 
                 # Load tracking data from Status column
                 self.load_tracking_from_status()
@@ -160,7 +244,7 @@ class DataManager:
                     UPDATE {self.table_name} 
                     SET contract_num = :contract_num, type = :type, brand = :brand, model = :model, 
                         sub_model = :sub_model, size = :size, color = :color, hardware = :hardware, 
-                        material = :material, picture_url = :picture_url, status = :status
+                        material = :material, picture_url = :picture_url, status = :status, editor = :editor
                     WHERE form_id = :form_id
                     """)
                     
@@ -176,12 +260,17 @@ class DataManager:
                         'material': row.get('Materials'),
                         'picture_url': row.get('Picture_url'),
                         'status': int(row.get('Status', 0)),
+                        'editor': row.get('Editor', ''),
                         'form_id': int(form_id)
                     })
                     
                     if result.rowcount == 0:
                         st.warning(f"⚠️ No record found with form_id {form_id}")
                         return False
+                
+                # After successful database update, refresh the local cache with the updated record
+                # This ensures the trigger-updated timestamp is reflected in our local data
+                self.refresh_single_record(int(form_id), index)
                 
                 return True
                 
@@ -197,6 +286,10 @@ class DataManager:
     
     def update_record(self, index, updated_data, keep_as_fixed=True):
         if self.data_cache is not None:
+            # Add current user as editor
+            current_user = st.session_state.get('username', 'Unknown')
+            updated_data['Editor'] = current_user
+            
             for column, value in updated_data.items():
                 if column in self.data_cache.columns:
                     self.data_cache.loc[index, column] = value
@@ -270,6 +363,9 @@ class DataManager:
                 # Update Status column in the dataframe
                 self.data_cache.loc[index, 'Status'] = 0
                 
+                # Keep the editor information - don't clear it
+                # User progress tracking will filter by status = 1 instead
+                
                 # Save only this specific record to database
                 return self.save_single_record(index)
                 
@@ -278,7 +374,54 @@ class DataManager:
                 return False
         return False
     
-
+    def refresh_single_record(self, form_id, index):
+        """Refresh a single record from database to get the latest data including trigger-updated fields"""
+        try:
+            engine = self.get_engine()
+            if engine is None:
+                return False
+            
+            # Fetch the updated record from database
+            with engine.begin() as conn:
+                fetch_sql = text(f"""
+                SELECT * FROM {self.table_name} WHERE form_id = :form_id
+                """)
+                result = conn.execute(fetch_sql, {'form_id': form_id})
+                row = result.fetchone()
+                
+                if row:
+                    # Convert row to dict and map column names
+                    row_dict = dict(row._mapping)
+                    
+                    # Map database columns to app columns
+                    column_mapping = {
+                        'form_id': 'Form_ids',
+                        'contract_num': 'Contract_Numbers', 
+                        'type': 'Types',
+                        'brand': 'Brands',
+                        'model': 'Models',
+                        'sub_model': 'Sub-Models',
+                        'size': 'Sizes',
+                        'color': 'Colors',
+                        'hardware': 'Hardwares',
+                        'material': 'Materials',
+                        'picture_url': 'Picture_url',
+                        'status': 'Status',
+                        'editor': 'Editor',
+                        'updated_at': 'Updated_at'
+                    }
+                    
+                    # Update the specific row in data_cache with fresh database values
+                    for db_col, app_col in column_mapping.items():
+                        if db_col in row_dict and app_col in self.data_cache.columns:
+                            self.data_cache.loc[index, app_col] = row_dict[db_col]
+                    
+                    return True
+                    
+        except Exception as e:
+            st.error(f"❌ Error refreshing record {form_id}: {e}")
+            
+        return False
     
     def get_tracking_stats(self):
         return {
@@ -287,7 +430,77 @@ class DataManager:
             'unfixed': len(self.unfixed_records)
         }
     
-    def export_to_excel(self, filename=None):
+    def get_user_daily_progress(self, target_date=None):
+        """Get daily progress for all users"""
+        if self.data_cache is None:
+            return {}
+        
+        # Use today if no date specified
+        if target_date is None:
+            target_date = pd.Timestamp.now().date()
+        else:
+            target_date = pd.to_datetime(target_date).date()
+        
+        progress_data = {}
+        
+        # Check if Updated_at column exists
+        if 'Updated_at' in self.data_cache.columns and 'Editor' in self.data_cache.columns:
+            # Convert Updated_at to datetime if it's not already
+            df_copy = self.data_cache.copy()
+            
+            # Handle different datetime formats and NULL values
+            try:
+                # Convert to datetime, coercing errors (NULL/invalid values become NaT)
+                df_copy['Updated_at'] = pd.to_datetime(df_copy['Updated_at'], errors='coerce')
+                
+                # Filter out records with NULL/NaT Updated_at values before date comparison
+                df_with_dates = df_copy.dropna(subset=['Updated_at'])
+                
+                # Filter records for the target date AND status = 1 (fixed)
+                if len(df_with_dates) > 0:
+                    df_today = df_with_dates[
+                        (df_with_dates['Updated_at'].dt.date == target_date) & 
+                        (df_with_dates['Status'] == 1)
+                    ]
+                    
+                    # Count records per user for today (only fixed records)
+                    user_counts = df_today.groupby('Editor').size().to_dict()
+                else:
+                    user_counts = {}
+                
+                # Get all unique users (including those who haven't worked today)
+                # Include users from all records, not just today's
+                all_users = df_copy['Editor'].dropna().unique()
+                
+                # Create progress data for all users
+                for user in all_users:
+                    if user and user != "admin":  # Skip empty usernames
+                        count = user_counts.get(user, 0)
+                        progress_data[user] = {
+                            'count': count,
+                            'target': 300,
+                            'percentage': min(100, (count / 300) * 100)
+                        }
+                        
+            except Exception as e:
+                st.error(f"Error calculating user progress: {e}")
+                # Return empty progress for all known users
+                try:
+                    all_users = self.data_cache['Editor'].dropna().unique()
+                    for user in all_users:
+                        if user and user.strip() and user != "admin":
+                            progress_data[user] = {
+                                'count': 0,
+                                'target': 300,
+                                'percentage': 0
+                            }
+                except:
+                    pass
+                return progress_data
+        
+        return progress_data
+    
+    #def export_to_excel(self, filename=None):
         """Export current data to Excel file"""
         if self.data_cache is not None:
             if filename is None:
@@ -1196,6 +1409,12 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
         st.rerun()
     
 # Initialize session state
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+if 'username' not in st.session_state:
+    st.session_state.username = None
+
 if 'data_manager' not in st.session_state:
     st.session_state.data_manager = DataManager()
 
@@ -1220,10 +1439,23 @@ if 'show_fixed_delete_popup' not in st.session_state:
 
 # Main app
 def main():
+    # Check authentication first
+    if not st.session_state.get('authenticated', False):
+        show_login_page()
+        return
+    
     st.title("Back Office Matching v2.0 (PostgreSQL)")
     
-    # Sidebar
+    # Add logout button in sidebar
     with st.sidebar:
+        current_user = st.session_state.get('username', 'Unknown')
+        st.write(f"👤 Logged in as: **{current_user}**")
+        
+        if st.button("🚪 Logout", type="secondary", use_container_width=True):
+            logout()
+        
+        st.markdown("---")
+        
         st.subheader("📊 Dashboard")
         stats = st.session_state.data_manager.get_tracking_stats()
         
@@ -1241,6 +1473,49 @@ def main():
             st.progress(stats['fixed'] / stats['total'])
         
         st.markdown("---")
+        
+        # User Daily Progress Dashboard
+        st.subheader("📈 Daily Progress")
+        
+        # Get user progress data
+        user_progress = st.session_state.data_manager.get_user_daily_progress()
+        
+        if user_progress:
+            # Sort users alphabetically for consistent display
+            sorted_users = sorted(user_progress.keys())
+            
+            for user in sorted_users:
+                data = user_progress[user]
+                count = data['count']
+                percentage = data['percentage']
+                
+                # Display user name and progress
+                st.write(f"**{user}**")
+                
+                # Progress bar with color coding
+                if percentage >= 100:
+                    progress_color = "🟢"  # Green for completed
+                elif percentage >= 75:
+                    progress_color = "🟡"  # Yellow for almost there
+                elif percentage >= 50:
+                    progress_color = "🟠"  # Orange for halfway
+                else:
+                    progress_color = "🔴"  # Red for needs work
+                
+                # Show progress bar
+                st.progress(min(1.0, percentage / 100))
+                
+                # Show detailed stats
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.caption(f"{progress_color} {count}/300")
+                with col2:
+                    st.caption(f"{percentage:.1f}%")
+                
+                if count == 300:
+                    st.caption("✅ Target achieved!")
+        else:
+            st.info("No user activity data available for today.")
         
         # Export controls
         st.subheader("🔧 Option")
@@ -1263,12 +1538,12 @@ def main():
             except Exception as e:
                 st.error(f"❌ Failed to refresh keywords: {e}")
 
-        if st.button("📁 Export to Excel", type="secondary"):
-            filename = st.session_state.data_manager.export_to_excel()
-            if filename:
-                st.success(f"✅ Exported: {os.path.basename(filename)}")
-            else:
-                st.error("❌ Export failed")
+        #if st.button("📁 Export to Excel", type="secondary"):
+            #filename = st.session_state.data_manager.export_to_excel()
+            #if filename:
+                #st.success(f"✅ Exported: {os.path.basename(filename)}")
+            #else:
+                #st.error("❌ Export failed")
         
             # Connection test
         #if st.button("🔧 Test DB Connection",type="primary"):
