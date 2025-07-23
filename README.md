@@ -1,7 +1,25 @@
-# Back Office matching v1.1 🏦
+# Back Office matching v1.1 🏦## 💻 Local Development (Optional)
 
-**URL**
-**http://192.168.1.66:8501/**
+If you want to run the applications directly without Docker:
+
+### Prerequisites
+```powershell
+# Install Python dependencies
+pip install -r requirements.txt
+```
+
+### Run the Applications
+```powershell
+# Main JJM Matching Application (Terminal 1)
+streamlit run app.py
+
+# Model Request Admin Panel (Terminal 2)
+streamlit run model_request_app.py --server.port=8502
+```
+
+The applications will be available at:
+- **Main app**: http://localhost:8501
+- **Admin panel**: http://localhost:8502p://192.168.1.66:8501/**
 
 ## 🚀 Quick Start
 
@@ -16,28 +34,18 @@
 2. **Brand keywords are already included!** The `BRAND_KEYWORDS` folder contains sample brand files (CHANEL, LOUIS_VUITTON)
 3. (Optional) Add more brand keyword JSON files to the `BRAND_KEYWORDS` folder if needed
 
-### 3. Run the Application
+### 3. Run the Applications
 
-**Option A: Main Deployment Script (Recommended)**
+**Start both applications with Docker Compose:**
 ```bash
-# Windows - double-click or run in command prompt
-deploy.bat
+docker-compose up -d
 ```
 
-**Option B: Simple Deployment**
-```bash
-# Windows - if you prefer the minimal version
-simple_deploy.bat
-```
+### 4. Access the Applications
+- **Main JJM Matching App**: http://localhost:8501
+- **Model Request Admin Panel**: http://localhost:8502
 
-**Option C: Docker Compose (Advanced)**
-```bash
-docker-compose up --build
-```
-
-### 4. Access the App
-- The app will automatically open in your browser after ~30 seconds
-- Or manually go to: **http://localhost:8501**
+Both applications will be available within ~30 seconds after starting.
 
 ## � Local Development (Alternative)
 
