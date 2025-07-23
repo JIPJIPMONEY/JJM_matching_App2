@@ -180,7 +180,7 @@ def save_model_request(request_data):
             brand=request_data['brand'],
             model=request_data['model'],
             submodel=request_data['submodel'],
-            sizes=request_data['sizes'],
+            sizes=request_data['sizes'] or '',  # Handle None case
             materials=request_data['materials'],
             notes=request_data['notes']
         )
@@ -363,8 +363,8 @@ def create_model_request_form():
             )
             # Model input (can be new or existing)
             size_input = st.text_input(
-                "Sizes *",
-                placeholder="Enter sizes (e.g., 7,8,9,10 or just 25)"
+                "Sizes",
+                placeholder="Enter sizes (e.g., 7,8,9,10 or just 25) - Optional if adding materials only"
             )
             
         
@@ -376,7 +376,7 @@ def create_model_request_form():
             # Size input - support both single and multiple sizes
             material_input = st.text_input(
             "Materials",
-            placeholder="Enter materials (e.g., Canvas, Leather or just Canvas)"
+            placeholder="Enter materials (e.g., Canvas, Leather) - Optional if adding sizes only"
             )
             
         # Additional notes
@@ -401,9 +401,10 @@ def create_model_request_form():
             if not submodel_name.strip():
                 st.error("❌ Please enter a collection name")
                 return
-                
-            if not size_input.strip():
-                st.error("❌ Please enter at least one size")
+            
+            # At least one of sizes or materials must be provided
+            if not size_input.strip() and not material_input.strip():
+                st.error("❌ Please enter at least sizes or materials (or both)")
                 return
             
             # Prepare request data using logged-in username
@@ -412,7 +413,7 @@ def create_model_request_form():
                 'brand': selected_brand.strip(),
                 'model': model_name.strip(),
                 'submodel': submodel_name.strip(),
-                'sizes': size_input.strip(),
+                'sizes': size_input.strip() if size_input.strip() else None,
                 'materials': material_input.strip() if material_input.strip() else None,
                 'notes': notes.strip() if notes.strip() else None
             }
@@ -421,6 +422,8 @@ def create_model_request_form():
             if save_model_request(request_data):
                 st.success("✅ Request submitted successfully!")
                 st.info(" Your request will be reviewed by an administrator.")
+                # Clear the form by rerunning the app
+                st.balloons()
                 st.rerun()
             else:
                 st.error("❌ Failed to submit request. Please try again.")
