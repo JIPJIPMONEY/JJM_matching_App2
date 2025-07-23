@@ -93,9 +93,9 @@ else:
 db_config = {
     'user': 'postgres',
     'password': '8558',
-    'host': '192.168.1.76',
+    'host': '192.168.1.111',
     'port': '5432',
-    'database': 'jjm_database'
+    'database': 'jipjipmoney'
 }
 
 # Data paths - check both local and mounted data directory (for keywords only now)
