@@ -427,7 +427,34 @@ def create_model_request_form():
                 st.rerun()
             else:
                 st.error("❌ Failed to submit request. Please try again.")
-
+            status_filter = st.selectbox("Filter by status:", ["All", "Approved", "Rejected"], key="processed_filter")
+            
+            # Filter processed requests
+    processed_requests = load_processed_requests()
+    # Sort by processed_at descending and limit to 20 rows
+    processed_requests = sorted(processed_requests, key=lambda r: r.processed_at or datetime.min, reverse=True)[:20]
+    # Create table data for processed requests
+    table_data = []
+    for request in processed_requests:
+        status_icon = "✅" if request.status == "approved" else "❌"
+        table_data.append({
+        'ID': request.id,
+        'Status': f"{status_icon} {request.status.title()}",
+        'Requested By': request.requested_by,
+        'Brand': request.brand,
+        'Model': request.model,
+        'Collection': request.submodel,
+        'Sizes': request.sizes,
+        'Materials': request.materials or 'N/A',
+        'Submitted': request.submitted_at.strftime('%Y-%m-%d %H:%M'),
+        'Processed By': request.processed_by,
+        'Processed At': request.processed_at.strftime('%Y-%m-%d %H:%M'),
+        'Admin Notes': request.admin_notes or 'N/A'
+        })
+    
+    # Display table
+    df = pd.DataFrame(table_data)
+    st.dataframe(df, use_container_width=True)
 def create_admin_panel():
     """Create admin panel for approving/rejecting requests"""
     st.subheader("👑 Admin: Model Request Management")
