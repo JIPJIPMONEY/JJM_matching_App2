@@ -346,15 +346,15 @@ def create_model_request_form():
     st.subheader("📝 Submit New Model Request")
     existing_brands = get_existing_brands()
     brands_options = [''] + sorted(existing_brands) if existing_brands else ['']
-    
+
     selected_brand = st.selectbox(
         "Brand *",
         brands_options
     )
-    
+
     with st.form("model_request_form"):
         col1, col2 = st.columns(2)
-        
+
         with col1:
             # Submodel input
             submodel_name = st.text_input(
@@ -366,8 +366,7 @@ def create_model_request_form():
                 "Sizes",
                 placeholder="Enter sizes (e.g., 7,8,9,10 or just 25) - Optional if adding materials only"
             )
-            
-        
+
         with col2:
             model_name = st.text_input(
                 "Model Name *",
@@ -375,38 +374,38 @@ def create_model_request_form():
             )
             # Size input - support both single and multiple sizes
             material_input = st.text_input(
-            "Materials",
-            placeholder="Enter materials (e.g., Canvas, Leather) - Optional if adding sizes only"
+                "Materials",
+                placeholder="Enter materials (e.g., Canvas, Leather) - Optional if adding sizes only"
             )
-            
+
         # Additional notes
         notes = st.text_area(
             "Additional Notes",
             placeholder="Any additional information or special requests..."
         )
-        
+
         # Submit button
         submitted = st.form_submit_button("📤 Submit Request", type="primary")
-        
+
         if submitted:
             # Validate required fields
             if not selected_brand:
                 st.error("❌ Please select a brand")
                 return
-            
+
             if not model_name.strip():
                 st.error("❌ Please enter a model name")
                 return
-                
+
             if not submodel_name.strip():
                 st.error("❌ Please enter a collection name")
                 return
-            
+
             # At least one of sizes or materials must be provided
             if not size_input.strip() and not material_input.strip():
                 st.error("❌ Please enter at least sizes or materials (or both)")
                 return
-            
+
             # Prepare request data using logged-in username
             request_data = {
                 'requested_by': st.session_state.username,
@@ -417,7 +416,7 @@ def create_model_request_form():
                 'materials': material_input.strip() if material_input.strip() else None,
                 'notes': notes.strip() if notes.strip() else None
             }
-            
+
             # Save request
             if save_model_request(request_data):
                 st.success("✅ Request submitted successfully!")
@@ -427,34 +426,34 @@ def create_model_request_form():
                 st.rerun()
             else:
                 st.error("❌ Failed to submit request. Please try again.")
-            status_filter = st.selectbox("Filter by status:", ["All", "Approved", "Rejected"], key="processed_filter")
-            
-            # Filter processed requests
-    processed_requests = load_processed_requests()
-    # Sort by processed_at descending and limit to 20 rows
-    processed_requests = sorted(processed_requests, key=lambda r: r.processed_at or datetime.min, reverse=True)[:20]
-    # Create table data for processed requests
-    table_data = []
-    for request in processed_requests:
-        status_icon = "✅" if request.status == "approved" else "❌"
-        table_data.append({
-        'ID': request.id,
-        'Status': f"{status_icon} {request.status.title()}",
-        'Requested By': request.requested_by,
-        'Brand': request.brand,
-        'Model': request.model,
-        'Collection': request.submodel,
-        'Sizes': request.sizes,
-        'Materials': request.materials or 'N/A',
-        'Submitted': request.submitted_at.strftime('%Y-%m-%d %H:%M'),
-        'Processed By': request.processed_by,
-        'Processed At': request.processed_at.strftime('%Y-%m-%d %H:%M'),
-        'Admin Notes': request.admin_notes or 'N/A'
-        })
-    
-    # Display table
-    df = pd.DataFrame(table_data)
-    st.dataframe(df, use_container_width=True)
+
+    # Show all requests with statuses
+    st.subheader("📋 All Requests")
+    all_requests = load_pending_requests() + load_processed_requests()
+
+    if all_requests:
+        # Create table data for all requests
+        table_data = []
+        for request in all_requests:
+            status_icon = "✅" if request.status == "approved" else ("❌" if request.status == "rejected" else "⏳")
+            table_data.append({
+                'ID': request.id,
+                'Requested By': request.requested_by,
+                'Brand': request.brand,
+                'Model': request.model,
+                'Collection': request.submodel,
+                'Sizes': request.sizes,
+                'Materials': request.materials or 'N/A',
+                'Status': f"{status_icon} {request.status.title()}",
+                'Submitted': request.submitted_at.strftime('%Y-%m-%d %H:%M')
+            })
+
+        # Display table
+        df = pd.DataFrame(table_data)
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("📭 No requests found at the moment.")
+
 def create_admin_panel():
     """Create admin panel for approving/rejecting requests"""
     st.subheader("👑 Admin: Model Request Management")
