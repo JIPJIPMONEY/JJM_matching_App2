@@ -454,6 +454,113 @@ def create_model_request_form():
     else:
         st.info("📭 No requests found at the moment.")
 
+def create_model_delete_request_form():
+    """Form for users to request deletion of a model from the main database"""
+    st.subheader("🗑️ Request Model Deletion from Main Database")
+    existing_brands = get_existing_brands()
+    brands_options = [''] + sorted(existing_brands) if existing_brands else ['']
+
+    selected_brand = st.selectbox(
+        "Brand * (for deletion)",
+        brands_options,
+        key="delete_brand_select"
+    )
+
+    model_name = st.text_input(
+        "Model Name * (for deletion)",
+        placeholder="Enter model name to delete (e.g., Neverfull, Speedy)",
+        key="delete_model_name"
+    )
+
+    notes = st.text_area(
+        "Reason for Deletion",
+        placeholder="Why should this model be deleted?",
+        key="delete_notes"
+    )
+
+    submitted = st.button("🗑️ Submit Delete Request", type="primary", key="submit_delete_request")
+
+    if submitted:
+        if not selected_brand:
+            st.error("❌ Please select a brand")
+            return
+        if not model_name.strip():
+            st.error("❌ Please enter a model name")
+            return
+        if not notes.strip():
+            st.error("❌ Please provide a reason for deletion")
+            return
+        # Save as a special request type
+        request_data = {
+            'requested_by': st.session_state.username,
+            'brand': selected_brand.strip(),
+            'model': model_name.strip(),
+            'submodel': '',
+            'sizes': '',
+            'materials': '',
+            'notes': f"DELETE REQUEST: {notes.strip()}"
+        }
+        # Save request with status 'pending_delete'
+        if save_model_request(request_data):
+            st.success("✅ Delete request submitted successfully! Admin will review.")
+            st.balloons()
+            st.rerun()
+        else:
+            st.error("❌ Failed to submit delete request.")
+
+def admin_delete_size_material():
+    """Admin tool to delete individual sizes or materials from main database"""
+    st.subheader("🗑️ Admin: Delete Size or Material")
+    brands = get_existing_brands()
+    if not brands:
+        st.info("No brands found in main database.")
+        return
+    selected_brand = st.selectbox("Brand", brands, key="delete_sm_brand")
+    # Get models for selected brand
+    engine = get_main_db_engine()
+    if not engine:
+        st.error("❌ Cannot connect to main database")
+        return
+    with engine.connect() as conn:
+        models = conn.execute(text("SELECT id, model_name, collection FROM models WHERE brand_id = (SELECT id FROM brands WHERE name = :brand) ORDER BY model_name"), {"brand": selected_brand}).fetchall()
+        if not models:
+            st.info("No models found for this brand.")
+            return
+        model_options = [f"{m[1]} ({m[2]})" for m in models]
+        selected_model_idx = st.selectbox("Model (Collection)", model_options, key="delete_sm_model")
+        selected_model = models[model_options.index(selected_model_idx)]
+        model_id = selected_model[0]
+        # Show all sizes
+        sizes = conn.execute(text("SELECT id, size FROM model_sizes WHERE model_id = :model_id ORDER BY size"), {"model_id": model_id}).fetchall()
+        st.markdown("**Sizes:**")
+        if sizes:
+            for size_row in sizes:
+                col1, col2 = st.columns([4,1])
+                with col1:
+                    st.write(size_row[1])
+                with col2:
+                    if st.button(f"🗑️ Delete Size", key=f"delete_size_{size_row[0]}"):
+                        conn.execute(text("DELETE FROM model_sizes WHERE id = :id"), {"id": size_row[0]})
+                        st.success(f"Deleted size: {size_row[1]}")
+                        st.rerun()
+        else:
+            st.info("No sizes found for this model.")
+        # Show all materials
+        materials = conn.execute(text("SELECT id, material FROM model_materials WHERE model_id = :model_id ORDER BY material"), {"model_id": model_id}).fetchall()
+        st.markdown("**Materials:**")
+        if materials:
+            for mat_row in materials:
+                col1, col2 = st.columns([4,1])
+                with col1:
+                    st.write(mat_row[1])
+                with col2:
+                    if st.button(f"🗑️ Delete Material", key=f"delete_material_{mat_row[0]}"):
+                        conn.execute(text("DELETE FROM model_materials WHERE id = :id"), {"id": mat_row[0]})
+                        st.success(f"Deleted material: {mat_row[1]}")
+                        st.rerun()
+        else:
+            st.info("No materials found for this model.")
+
 def create_admin_panel():
     """Create admin panel for approving/rejecting requests"""
     st.subheader("👑 Admin: Model Request Management")
@@ -592,9 +699,9 @@ def main():
         
         # Navigation
         if st.session_state.username == "admin":
-            page = st.radio("Navigation:", ["📝 Submit Request", "👑 Admin Panel"])
+            page = st.radio("Navigation:", ["📝 Submit Request", "🗑️ Delete Model Request", "🗑️ Delete Size/Material", "👑 Admin Panel"])
         else:
-            page = st.radio("Navigation:", ["📝 Submit Request"])
+            page = st.radio("Navigation:", ["📝 Submit Request", "🗑️ Delete Model Request"])
         
         st.markdown("---")
         st.caption("Model Request System v2.0")
@@ -609,6 +716,10 @@ def main():
     # Main content
     if page == "📝 Submit Request":
         create_model_request_form()
+    elif page == "🗑️ Delete Model Request":
+        create_model_delete_request_form()
+    elif page == "🗑️ Delete Size/Material":
+        admin_delete_size_material()
     elif page == "👑 Admin Panel":
         create_admin_panel()
 
