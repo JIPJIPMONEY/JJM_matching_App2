@@ -285,19 +285,19 @@ def insert_approved_request_to_main_db(request):
                 )
                 brand_id = brand_result.fetchone()[0]
             
-            # Get or create model
+            # Get or create model (swap model and collection logic)
             model_result = conn.execute(
-                text("SELECT id FROM models WHERE brand_id = :brand_id AND UPPER(model_name) = UPPER(:model_name)"),
-                {"brand_id": brand_id, "model_name": request.model}
+                text("SELECT id FROM models WHERE brand_id = :brand_id AND UPPER(model_name) = UPPER(:model_name) AND UPPER(collection) = UPPER(:collection)"),
+                {"brand_id": brand_id, "model_name": request.submodel, "collection": request.model}
             ).fetchone()
             
             if model_result:
                 model_id = model_result[0]
             else:
-                # Create new model
+                # Create new model (collection is now the main category, model_name is the specific item)
                 model_result = conn.execute(
                     text("INSERT INTO models (brand_id, model_name, collection) VALUES (:brand_id, :model_name, :collection) RETURNING id"),
-                    {"brand_id": brand_id, "model_name": request.model, "collection": request.submodel}
+                    {"brand_id": brand_id, "model_name": request.submodel, "collection": request.model}
                 )
                 model_id = model_result.fetchone()[0]
             
@@ -356,23 +356,24 @@ def create_model_request_form():
         col1, col2 = st.columns(2)
 
         with col1:
-            # Submodel input
-            submodel_name = st.text_input(
-                "Collection Name *",
-                placeholder="Enter collection name (e.g., Classic, 19, Reissue)"
+            # Model input (main category)
+            collection_name = st.text_input(
+                "Model *",
+                placeholder="Enter model name (e.g., Vintage, Chevron, Classic Line)"
             )
-            # Model input (can be new or existing)
+            # Size input - support both single and multiple sizes
             size_input = st.text_input(
                 "Sizes",
                 placeholder="Enter sizes (e.g., 7,8,9,10 or just 25) - Optional if adding materials only"
             )
 
         with col2:
+            # Submodel input (specific item within model)
             model_name = st.text_input(
-                "Model Name *",
-                placeholder="Enter model name (e.g., Neverfull, Speedy)"
+                "Submodel *",
+                placeholder="Enter specific submodel (e.g., Kelly, Diana, Classic)"
             )
-            # Size input - support both single and multiple sizes
+            # Material input
             material_input = st.text_input(
                 "Materials",
                 placeholder="Enter materials (e.g., Canvas, Leather) - Optional if adding sizes only"
@@ -394,11 +395,11 @@ def create_model_request_form():
                 return
 
             if not model_name.strip():
-                st.error("❌ Please enter a model name")
+                st.error("❌ Please enter a submodel name")
                 return
 
-            if not submodel_name.strip():
-                st.error("❌ Please enter a collection name")
+            if not collection_name.strip():
+                st.error("❌ Please enter a model name")
                 return
 
             # At least one of sizes or materials must be provided
@@ -406,12 +407,12 @@ def create_model_request_form():
                 st.error("❌ Please enter at least sizes or materials (or both)")
                 return
 
-            # Prepare request data using logged-in username
+            # Prepare request data using logged-in username (model goes to model field, submodel goes to submodel field)
             request_data = {
                 'requested_by': st.session_state.username,
                 'brand': selected_brand.strip(),
-                'model': model_name.strip(),
-                'submodel': submodel_name.strip(),
+                'model': collection_name.strip(),  # Model goes to model field
+                'submodel': model_name.strip(),    # Submodel goes to submodel field
                 'sizes': size_input.strip() if size_input.strip() else None,
                 'materials': material_input.strip() if material_input.strip() else None,
                 'notes': notes.strip() if notes.strip() else None
@@ -440,8 +441,8 @@ def create_model_request_form():
                 'ID': request.id,
                 'Requested By': request.requested_by,
                 'Brand': request.brand,
-                'Model': request.model,
-                'Collection': request.submodel,
+                'Model': request.model,        # Model is stored in model field
+                'Submodel': request.submodel,  # Submodel is stored in submodel field
                 'Sizes': request.sizes,
                 'Materials': request.materials or 'N/A',
                 'Status': f"{status_icon} {request.status.title()}",
@@ -509,14 +510,13 @@ def create_model_delete_request_form():
             st.error("❌ Failed to submit delete request.")
 
 def admin_delete_size_material():
-    """Admin tool to delete individual sizes or materials from main database"""
+    """Admin tool to delete individual sizes or materials from main database, with confirmation popup"""
     st.subheader("🗑️ Admin: Delete Size or Material")
     brands = get_existing_brands()
     if not brands:
         st.info("No brands found in main database.")
         return
     selected_brand = st.selectbox("Brand", brands, key="delete_sm_brand")
-    # Get models for selected brand
     engine = get_main_db_engine()
     if not engine:
         st.error("❌ Cannot connect to main database")
@@ -530,36 +530,131 @@ def admin_delete_size_material():
         selected_model_idx = st.selectbox("Model (Collection)", model_options, key="delete_sm_model")
         selected_model = models[model_options.index(selected_model_idx)]
         model_id = selected_model[0]
+        
         # Show all sizes
         sizes = conn.execute(text("SELECT id, size FROM model_sizes WHERE model_id = :model_id ORDER BY size"), {"model_id": model_id}).fetchall()
-        st.markdown("**Sizes:**")
+        st.markdown("<h3 style='text-align: center;'>Sizes</h3>", unsafe_allow_html=True)
         if sizes:
             for size_row in sizes:
                 col1, col2 = st.columns([4,1])
                 with col1:
                     st.write(size_row[1])
                 with col2:
-                    if st.button(f"🗑️ Delete Size", key=f"delete_size_{size_row[0]}"):
-                        conn.execute(text("DELETE FROM model_sizes WHERE id = :id"), {"id": size_row[0]})
-                        st.success(f"Deleted size: {size_row[1]}")
-                        st.rerun()
+                    if st.button(f"🗑️ Delete", key=f"delete_size_{size_row[0]}"):
+                        st.session_state['confirm_delete'] = {
+                            'type': 'size',
+                            'id': size_row[0],
+                            'name': size_row[1],
+                            'model_id': model_id
+                        }
+                        st.session_state['show_delete_modal'] = True
         else:
             st.info("No sizes found for this model.")
+        
         # Show all materials
         materials = conn.execute(text("SELECT id, material FROM model_materials WHERE model_id = :model_id ORDER BY material"), {"model_id": model_id}).fetchall()
-        st.markdown("**Materials:**")
+        st.markdown("<h3 style='text-align: center;'>Materials</h3>", unsafe_allow_html=True)
         if materials:
             for mat_row in materials:
                 col1, col2 = st.columns([4,1])
                 with col1:
                     st.write(mat_row[1])
                 with col2:
-                    if st.button(f"🗑️ Delete Material", key=f"delete_material_{mat_row[0]}"):
-                        conn.execute(text("DELETE FROM model_materials WHERE id = :id"), {"id": mat_row[0]})
-                        st.success(f"Deleted material: {mat_row[1]}")
-                        st.rerun()
+                    if st.button(f"🗑️ Delete", key=f"delete_material_{mat_row[0]}"):
+                        st.session_state['confirm_delete'] = {
+                            'type': 'material',
+                            'id': mat_row[0],
+                            'name': mat_row[1],
+                            'model_id': model_id
+                        }
+                        st.session_state['show_delete_modal'] = True
         else:
             st.info("No materials found for this model.")
+    
+    # Modal popup using @st.dialog decorator (only works in Streamlit 1.31+)
+    if st.session_state.get('show_delete_modal', False):
+        confirm_info = st.session_state.get('confirm_delete', {})
+        if confirm_info:
+            @st.dialog("Delete Confirmation")
+            def delete_confirmation_modal():
+                st.error(f"⚠️ Are you sure you want to delete **{confirm_info['type'].capitalize()}**: **{confirm_info['name']}**?")
+                st.warning("This action cannot be undone!")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if st.button("🗑️ Yes, Delete", type="primary", use_container_width=True, key="modal_confirm_delete"):
+                        engine = get_main_db_engine()
+                        if engine:
+                            try:
+                                with engine.begin() as conn:  # Use begin() for auto-commit
+                                    if confirm_info['type'] == 'size':
+                                        result = conn.execute(text("DELETE FROM model_sizes WHERE id = :id"), {"id": confirm_info['id']})
+                                        if result.rowcount > 0:
+                                            st.success(f"✅ Deleted size: {confirm_info['name']}")
+                                        else:
+                                            st.error(f"❌ Size not found or already deleted")
+                                    elif confirm_info['type'] == 'material':
+                                        result = conn.execute(text("DELETE FROM model_materials WHERE id = :id"), {"id": confirm_info['id']})
+                                        if result.rowcount > 0:
+                                            st.success(f"✅ Deleted material: {confirm_info['name']}")
+                                        else:
+                                            st.error(f"❌ Material not found or already deleted")
+                            except Exception as e:
+                                st.error(f"❌ Error deleting: {str(e)}")
+                        
+                        # Clear session state and refresh
+                        st.session_state['show_delete_modal'] = False
+                        st.session_state['confirm_delete'] = None
+                        st.rerun()
+                
+                with col2:
+                    if st.button("❌ Cancel", use_container_width=True, key="modal_cancel_delete"):
+                        st.session_state['show_delete_modal'] = False
+                        st.session_state['confirm_delete'] = None
+                        st.rerun()
+            
+            delete_confirmation_modal()
+
+def show_model_size_material_table():
+    """Show table of all models with sizes and materials, filterable by brand"""
+    st.subheader("📋 Model Size/Material Table")
+    brands = get_existing_brands()
+    if not brands:
+        st.info("No brands found in main database.")
+        return
+    selected_brand = st.selectbox("Filter by Brand", ['All'] + brands, key="table_brand_filter")
+    engine = get_main_db_engine()
+    if not engine:
+        st.error("❌ Cannot connect to main database")
+        return
+    with engine.connect() as conn:
+        if selected_brand == 'All':
+            models = conn.execute(text("SELECT m.id, b.name, m.model_name, m.collection FROM models m JOIN brands b ON m.brand_id = b.id ORDER BY b.name, m.model_name")).fetchall()
+        else:
+            models = conn.execute(text("SELECT m.id, b.name, m.model_name, m.collection FROM models m JOIN brands b ON m.brand_id = b.id WHERE b.name = :brand ORDER BY m.model_name"), {"brand": selected_brand}).fetchall()
+        if not models:
+            st.info("No models found for this brand.")
+            return
+        table_data = []
+        for m in models:
+            model_id = m[0]
+            brand = m[1]
+            model_name = m[2]
+            collection = m[3]
+            sizes = conn.execute(text("SELECT size FROM model_sizes WHERE model_id = :model_id ORDER BY size"), {"model_id": model_id}).fetchall()
+            materials = conn.execute(text("SELECT material FROM model_materials WHERE model_id = :model_id ORDER BY material"), {"model_id": model_id}).fetchall()
+            sizes_str = ", ".join([s[0] for s in sizes]) if sizes else ""
+            materials_str = ", ".join([mat[0] for mat in materials]) if materials else ""
+            table_data.append({
+                "Brand": brand,
+                "Model": collection,    # Collection field from DB is now Model
+                "Submodel": model_name, # Model_name field from DB is now Submodel
+                "Sizes": sizes_str,
+                "Materials": materials_str
+            })
+        df = pd.DataFrame(table_data)
+        st.dataframe(df, use_container_width=True)
 
 def create_admin_panel():
     """Create admin panel for approving/rejecting requests"""
@@ -587,7 +682,7 @@ def create_admin_panel():
                         st.write(f"**👤 Requested by:** {request.requested_by}")
                         st.write(f"**🏷️ Brand:** {request.brand}")
                         st.write(f"**📦 Model:** {request.model}")
-                        st.write(f"**🔸 Collection:** {request.submodel}")
+                        st.write(f"**🔸 Submodel:** {request.submodel}")
                         st.write(f"**📏 Sizes:** {request.sizes}")
                         if request.materials:
                             st.write(f"**🧵 Materials:** {request.materials}")
@@ -654,7 +749,7 @@ def create_admin_panel():
                         'Requested By': request.requested_by,
                         'Brand': request.brand,
                         'Model': request.model,
-                        'Collection': request.submodel,
+                        'Submodel': request.submodel,
                         'Sizes': request.sizes,
                         'Materials': request.materials or 'N/A',
                         'Submitted': request.submitted_at.strftime('%Y-%m-%d %H:%M'),
@@ -691,33 +786,28 @@ def main():
         st.subheader(f"👤 {st.session_state.username}")
         if st.session_state.username == "admin":
             st.success("👑 Admin")
-        
         if st.button("🚪 Logout", type="secondary"):
             logout_user()
-        
         st.markdown("---")
-        
         # Navigation
         if st.session_state.username == "admin":
-            page = st.radio("Navigation:", ["📝 Submit Request", "🗑️ Delete Model Request", "🗑️ Delete Size/Material", "👑 Admin Panel"])
+            page = st.radio("Navigation:", ["📝 Submit Request", "📋 Model Size/Material Table", "🗑️ Delete Size/Material", "👑 Admin Panel"])
         else:
-            page = st.radio("Navigation:", ["📝 Submit Request", "🗑️ Delete Model Request"])
-        
+            page = st.radio("Navigation:", ["📝 Submit Request", "📋 Model Size/Material Table"])
         st.markdown("---")
         st.caption("Model Request System v2.0")
         with st.expander("🔍 Database Status", expanded=False):
-        # Test request database
-          req_engine = get_request_db_engine()
-          main_engine = get_main_db_engine()
-          if req_engine and main_engine:
-              st.success("✅ database: Connected")
-          else:
-              st.error("❌ database: Failed")
+            req_engine = get_request_db_engine()
+            main_engine = get_main_db_engine()
+            if req_engine and main_engine:
+                st.success("✅ database: Connected")
+            else:
+                st.error("❌ database: Failed")
     # Main content
     if page == "📝 Submit Request":
         create_model_request_form()
-    elif page == "🗑️ Delete Model Request":
-        create_model_delete_request_form()
+    elif page == "📋 Model Size/Material Table":
+        show_model_size_material_table()
     elif page == "🗑️ Delete Size/Material":
         admin_delete_size_material()
     elif page == "👑 Admin Panel":
