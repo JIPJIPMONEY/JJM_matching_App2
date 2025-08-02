@@ -28,8 +28,8 @@ else:
 
 # Database configuration for request_model database
 REQUEST_DB_CONFIG = {
-    'user': 'postgres',
-    'password': '8558',
+    'user': 'datateam',
+    'password': 'jipjipmoneydata',
     'host': '192.168.1.111',
     'port': '5432',
     'database': 'request_model'
@@ -37,8 +37,8 @@ REQUEST_DB_CONFIG = {
 
 # Database configuration for jipjipmoney database (for fetching existing brands)
 MAIN_DB_CONFIG = {
-    'user': 'postgres',
-    'password': '8558',
+    'user': 'datateam',
+    'password': 'jipjipmoneydata',
     'host': '192.168.1.111',
     'port': '5432',
     'database': 'jipjipmoney'
@@ -510,8 +510,8 @@ def create_model_delete_request_form():
             st.error("❌ Failed to submit delete request.")
 
 def admin_delete_size_material():
-    """Admin tool to delete individual sizes or materials from main database, with confirmation popup"""
-    st.subheader("🗑️ Admin: Delete Size or Material")
+    """Admin tool to delete, edit, and add sizes or materials from main database, with confirmation popup"""
+    st.subheader("🗑️ Admin: Manage Sizes and Materials")
     brands = get_existing_brands()
     if not brands:
         st.info("No brands found in main database.")
@@ -526,20 +526,81 @@ def admin_delete_size_material():
         if not models:
             st.info("No models found for this brand.")
             return
-        model_options = [f"{m[1]} ({m[2]})" for m in models]
-        selected_model_idx = st.selectbox("Model (Collection)", model_options, key="delete_sm_model")
+        model_options = [f"{m[2]} ({m[1]})" for m in models]  # Show collection (model_name) format
+        selected_model_idx = st.selectbox("Model (Submodel)", model_options, key="delete_sm_model")
         selected_model = models[model_options.index(selected_model_idx)]
         model_id = selected_model[0]
+        model_name = selected_model[2]  # collection field is our "Model"
+        collection = selected_model[1]  # model_name field is our "Submodel"
+        
+        # Add new size/material section
+        st.markdown("---")
+        st.markdown("### ➕ Add New Size or Material")
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            new_size = st.text_input("Add New Size", placeholder="Enter new size (e.g., 25, XL)", key="new_size_input")
+            if st.button("📝 Request Add Size", key="add_size_btn"):
+                if new_size.strip():
+                    # Create request for adding size
+                    request_data = {
+                        'requested_by': st.session_state.username,
+                        'brand': selected_brand,
+                        'model': model_name,      # Model (collection field)
+                        'submodel': collection,   # Submodel (model_name field)
+                        'sizes': new_size.strip(),
+                        'materials': '',
+                        'notes': f"ADD SIZE REQUEST: Add size '{new_size.strip()}' to {model_name} - {collection}"
+                    }
+                    if save_model_request(request_data):
+                        st.success(f"✅ Request to add size '{new_size}' submitted!")
+                        st.rerun()
+                else:
+                    st.error("❌ Please enter a size")
+        
+        with col2:
+            new_material = st.text_input("Add New Material", placeholder="Enter new material (e.g., Canvas, Leather)", key="new_material_input")
+            if st.button("📝 Request Add Material", key="add_material_btn"):
+                if new_material.strip():
+                    # Create request for adding material
+                    request_data = {
+                        'requested_by': st.session_state.username,
+                        'brand': selected_brand,
+                        'model': model_name,      # Model (collection field)
+                        'submodel': collection,   # Submodel (model_name field)
+                        'sizes': '',
+                        'materials': new_material.strip(),
+                        'notes': f"ADD MATERIAL REQUEST: Add material '{new_material.strip()}' to {model_name} - {collection}"
+                    }
+                    if save_model_request(request_data):
+                        st.success(f"✅ Request to add material '{new_material}' submitted!")
+                        st.rerun()
+                else:
+                    st.error("❌ Please enter a material")
+        
+        st.markdown("---")
         
         # Show all sizes
         sizes = conn.execute(text("SELECT id, size FROM model_sizes WHERE model_id = :model_id ORDER BY size"), {"model_id": model_id}).fetchall()
         st.markdown("<h3 style='text-align: center;'>Sizes</h3>", unsafe_allow_html=True)
         if sizes:
             for size_row in sizes:
-                col1, col2 = st.columns([4,1])
+                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
                 with col1:
                     st.write(size_row[1])
                 with col2:
+                    if st.button(f"✏️ Edit", key=f"edit_size_{size_row[0]}"):
+                        st.session_state['edit_item'] = {
+                            'type': 'size',
+                            'id': size_row[0],
+                            'name': size_row[1],
+                            'model_id': model_id,
+                            'model_name': model_name,     # Model (collection field)
+                            'collection': collection,     # Submodel (model_name field)
+                            'brand': selected_brand
+                        }
+                        st.session_state['show_edit_modal'] = True
+                with col3:
                     if st.button(f"🗑️ Delete", key=f"delete_size_{size_row[0]}"):
                         st.session_state['confirm_delete'] = {
                             'type': 'size',
@@ -556,10 +617,22 @@ def admin_delete_size_material():
         st.markdown("<h3 style='text-align: center;'>Materials</h3>", unsafe_allow_html=True)
         if materials:
             for mat_row in materials:
-                col1, col2 = st.columns([4,1])
+                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
                 with col1:
                     st.write(mat_row[1])
                 with col2:
+                    if st.button(f"✏️ Edit", key=f"edit_material_{mat_row[0]}"):
+                        st.session_state['edit_item'] = {
+                            'type': 'material',
+                            'id': mat_row[0],
+                            'name': mat_row[1],
+                            'model_id': model_id,
+                            'model_name': model_name,     # Model (collection field)
+                            'collection': collection,     # Submodel (model_name field)
+                            'brand': selected_brand
+                        }
+                        st.session_state['show_edit_modal'] = True
+                with col3:
                     if st.button(f"🗑️ Delete", key=f"delete_material_{mat_row[0]}"):
                         st.session_state['confirm_delete'] = {
                             'type': 'material',
@@ -571,7 +644,53 @@ def admin_delete_size_material():
         else:
             st.info("No materials found for this model.")
     
-    # Modal popup using @st.dialog decorator (only works in Streamlit 1.31+)
+    # Edit modal
+    if st.session_state.get('show_edit_modal', False):
+        edit_info = st.session_state.get('edit_item', {})
+        if edit_info:
+            @st.dialog("Edit Item")
+            def edit_item_modal():
+                st.info(f"✏️ Edit {edit_info['type'].capitalize()}: **{edit_info['name']}**")
+                
+                new_value = st.text_input(f"New {edit_info['type']} value:", value=edit_info['name'], key="edit_value_input")
+                
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    if st.button("📝 Submit Edit Request", type="primary", use_container_width=True, key="modal_submit_edit"):
+                        if new_value.strip() and new_value.strip() != edit_info['name']:
+                            # Create request for editing
+                            field_name = 'sizes' if edit_info['type'] == 'size' else 'materials'
+                            request_data = {
+                                'requested_by': st.session_state.username,
+                                'brand': edit_info['brand'],
+                                'model': edit_info['model_name'],      # Model field
+                                'submodel': edit_info['collection'],   # Submodel field
+                                field_name: new_value.strip(),
+                                'sizes' if field_name == 'materials' else 'materials': '',
+                                'notes': f"EDIT {edit_info['type'].upper()} REQUEST: Change '{edit_info['name']}' to '{new_value.strip()}' for {edit_info['model_name']} - {edit_info['collection']} (ID: {edit_info['id']})"
+                            }
+                            if save_model_request(request_data):
+                                st.success(f"✅ Edit request submitted for {edit_info['type']}: {edit_info['name']} → {new_value}")
+                            else:
+                                st.error("❌ Failed to submit edit request")
+                        else:
+                            st.error("❌ Please enter a different value")
+                        
+                        # Clear session state and refresh
+                        st.session_state['show_edit_modal'] = False
+                        st.session_state['edit_item'] = None
+                        st.rerun()
+                
+                with col2:
+                    if st.button("❌ Cancel", use_container_width=True, key="modal_cancel_edit"):
+                        st.session_state['show_edit_modal'] = False
+                        st.session_state['edit_item'] = None
+                        st.rerun()
+            
+            edit_item_modal()
+    
+    # Delete modal (existing functionality)
     if st.session_state.get('show_delete_modal', False):
         confirm_info = st.session_state.get('confirm_delete', {})
         if confirm_info:
@@ -791,7 +910,7 @@ def main():
         st.markdown("---")
         # Navigation
         if st.session_state.username == "admin":
-            page = st.radio("Navigation:", ["📝 Submit Request", "📋 Model Size/Material Table", "🗑️ Delete Size/Material", "👑 Admin Panel"])
+            page = st.radio("Navigation:", ["📝 Submit Request", "📋 Model Size/Material Table", "�️ Manage Sizes/Materials", "👑 Admin Panel"])
         else:
             page = st.radio("Navigation:", ["📝 Submit Request", "📋 Model Size/Material Table"])
         st.markdown("---")
@@ -808,7 +927,7 @@ def main():
         create_model_request_form()
     elif page == "📋 Model Size/Material Table":
         show_model_size_material_table()
-    elif page == "🗑️ Delete Size/Material":
+    elif page == "�️ Manage Sizes/Materials":
         admin_delete_size_material()
     elif page == "👑 Admin Panel":
         create_admin_panel()
