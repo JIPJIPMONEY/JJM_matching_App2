@@ -91,7 +91,7 @@ else:
 
 # Database configuration
 db_config = {
-    'user': 'postgres',
+    'user': 'datateam',
     'password': 'jipjipmoneydata',
     'host': '192.168.1.111',
     'port': '5432',
@@ -363,37 +363,39 @@ class DataManager:
         return False
     
     def delete_record(self, index):
-        """Delete a record from the dataframe and database using SQLAlchemy"""
+        """Soft delete a record by setting status to 2 (deleted) instead of actually removing it"""
         if self.data_cache is not None and index in self.data_cache.index:
             try:
                 # Get the form_id of the record to delete
                 form_id = self.data_cache.loc[index, 'Form_ids']
                 
-                # Delete from database first using SQLAlchemy
+                # Update status to 2 (deleted) in database using SQLAlchemy
                 engine = self.get_engine()
                 if engine:
                     with engine.begin() as conn:  # Use begin() for automatic transaction management
-                        delete_sql = text(f"DELETE FROM {self.table_name} WHERE form_id = :form_id")
-                        result = conn.execute(delete_sql, {'form_id': int(form_id)})  # Ensure form_id is int
+                        delete_sql = text(f"UPDATE {self.table_name} SET status = 2, editor = :editor WHERE form_id = :form_id")
+                        current_user = st.session_state.get('username', 'Unknown')
+                        result = conn.execute(delete_sql, {
+                            'form_id': int(form_id),
+                            'editor': current_user
+                        })
                         
                         if result.rowcount == 0:
                             st.warning(f"⚠️ No record found with form_id {form_id}")
                             return False
                 
-                # Remove from tracking sets
+                # Update status in local dataframe (KEEP the record, just change status)
+                self.data_cache.loc[index, 'Status'] = 2
+                self.data_cache.loc[index, 'Editor'] = st.session_state.get('username', 'Unknown')
+                
+                # Remove from tracking sets (since it's now "deleted")
                 if index in self.fixed_records:
                     self.fixed_records.remove(index)
                 if index in self.unfixed_records:
                     self.unfixed_records.remove(index)
                 
-                # Drop the record from dataframe
-                self.data_cache = self.data_cache.drop(index)
-                
-                # Reset index to avoid gaps
-                self.data_cache = self.data_cache.reset_index(drop=True)
-                
-                # Update tracking sets with new indices
-                self.load_tracking_from_status()
+                # DO NOT drop the record from dataframe - keep it for potential recovery
+                # DO NOT reset index - this prevents data loss
                 
                 return True
             except Exception as e:
@@ -474,11 +476,27 @@ class DataManager:
         return False
     
     def get_tracking_stats(self):
-        return {
-            'total': len(self.data_cache) if self.data_cache is not None else 0,
-            'fixed': len(self.fixed_records),
-            'unfixed': len(self.unfixed_records)
-        }
+        if self.data_cache is not None:
+            # Exclude deleted records (status 2) from total count
+            active_records = self.data_cache[self.data_cache['Status'] != 2] if 'Status' in self.data_cache.columns else self.data_cache
+            deleted_records = len(self.data_cache[self.data_cache['Status'] == 2]) if 'Status' in self.data_cache.columns else 0
+            
+            return {
+                'total': len(active_records),
+                'fixed': len(self.fixed_records),
+                'unfixed': len(self.unfixed_records),
+                'deleted': deleted_records,
+                'total_including_deleted': len(self.data_cache)
+            }
+        else:
+            return {
+                'total': 0,
+                'fixed': 0,
+                'unfixed': 0,
+                'deleted': 0,
+                'total_including_deleted': 0
+            }
+    
     
     def get_user_daily_progress(self, target_date=None):
         """Get daily progress for all users"""
@@ -1678,7 +1696,10 @@ def main():
         df = st.session_state.data_manager.load_data()
         
         if df is not None:
-            st.success(f"✅ Loaded {len(df)} records successfully!")
+            # Filter out deleted records (status = 2) for display
+            active_df = df[df['Status'] != 2] if 'Status' in df.columns else df
+            
+            st.success(f"✅ Loaded {len(active_df)} records successfully!")
             
             # Create three-column layout: Image Preview | Data Management | Edit Form
             col1, col2, col3 = st.columns([1, 2, 1])
@@ -1720,9 +1741,9 @@ def main():
             
             # Middle Column: Filters and Data Table
             with col2:
-                # Filters
-                filters = create_filters(df)
-                filtered_df = apply_filters(df, filters)
+                # Filters - use active_df to exclude deleted records
+                filters = create_filters(active_df)
+                filtered_df = apply_filters(active_df, filters)
                 
                 # Data table
                 st.subheader(f"📋 Data Table ({len(filtered_df)} records)")
