@@ -14,13 +14,13 @@ import os
 # Configure page - adjust based on authentication state
 if 'authenticated' not in st.session_state or not st.session_state.get('authenticated', False):
     st.set_page_config(
-        page_title="Login - Model Request System",
+        page_title="Login - Keywords Manager v2.0",
         page_icon="🔐",
         layout="centered"
     )
 else:
     st.set_page_config(
-        page_title="Model Request System",
+        page_title="Keywords Manager v2.0",
         page_icon="📝",
         layout="wide",
         initial_sidebar_state="expanded"
@@ -48,7 +48,7 @@ MAIN_DB_CONFIG = {
 USER_CREDENTIALS = {
     "admin": {"password": "admin8558", "role": "admin"},  # Can approve/reject and execute requests
     "Build@CS": {"password": "NRJ24017", "role": "user"}, 
-    "Pin@SCL": {"password": "NRJ23006", "role": "admin"},
+    "Pin@SCL": {"password": "NRJ23006", "role": "admin"},# Can approve/reject and execute requests
     "Knight@SCL": {"password": "NRJ23004", "role": "user"},
     "Gun@SCL": {"password": "NRJ24027", "role": "user"}
 }
@@ -72,7 +72,7 @@ def authenticate_user():
 def show_login_page():
     """Display login page"""
     st.title("🔐 Login Required")
-    st.subheader("Model Request System v2.0")
+    st.subheader("Keywords Manager V.2")
     
     # Center the login form
     col1, col2, col3 = st.columns([1, 2, 1])
@@ -578,11 +578,11 @@ def execute_delete_request(conn, request):
 
 def create_model_request_form():
     """Create the comprehensive model request form with add/edit/delete categories"""
-    st.subheader("📝 Submit New Model Request")
+    st.subheader("📝 Submit Request")
     
     # Category selection
     category = st.selectbox(
-        "Request Category *",
+        "Request category *",
         ["add", "edit", "delete"],
         format_func=lambda x: {"add": "➕ Add", "edit": "✏️ Edit", "delete": "🗑️ Delete"}[x]
     )
@@ -789,7 +789,7 @@ def show_user_requests():
         # Apply filters
         filtered_requests = all_requests
         if category_filter != "All":
-            filtered_requests = [r for r in filtered_requests if (r.category or 'add') == category_filter.lower()]
+            filtered_requests = [r for r in filtered_requests if (r.category or 'add').strip() == category_filter.lower()]
         if status_filter != "All":
             filtered_requests = [r for r in filtered_requests if r.status == status_filter.lower()]
         if edit_status_filter != "All":
@@ -801,7 +801,7 @@ def show_user_requests():
             # Create table data
             table_data = []
             for request in filtered_requests:
-                category = request.category or 'add'
+                category = (request.category or 'add').strip()
                 category_icon = {"add": "➕", "edit": "✏️", "delete": "🗑️"}[category]
                 status_icon = "✅" if request.status == "approved" else ("❌" if request.status == "rejected" else "⏳")
                 # Get the actual edit status and handle case sensitivity
@@ -830,7 +830,7 @@ def show_user_requests():
 
 def show_model_size_material_table():
     """Show table of all models with sizes and materials, filterable by brand"""
-    st.subheader("📋 Model Size/Material Table")
+    st.subheader("Brand Keywords")
     brands = get_existing_brands()
     if not brands:
         st.info("No brands found in main database.")
@@ -1024,7 +1024,7 @@ def show_processed_requests():
             # Create table data
             table_data = []
             for request in filtered_requests:
-                category = request.category or 'add'
+                category = (request.category or 'add').strip()
                 category_icon = {"add": "➕", "edit": "✏️", "delete": "🗑️"}[category]
                 status_icon = "✅" if request.status == "approved" else "❌"
                 edit_status_icon = "✅" if (request.edit_status or 'pending').lower() == "done" else "⏳"
@@ -1179,7 +1179,7 @@ def show_executed_requests():
             # Create table data
             table_data = []
             for request in requests:
-                category = request.category or 'add'
+                category = (request.category or 'add').strip()
                 category_icon = {"add": "➕", "edit": "✏️", "delete": "🗑️"}[category]
                 
                 table_data.append({
@@ -1204,7 +1204,7 @@ def show_executed_requests():
 
 def get_request_description(request):
     """Get a formatted description of the request"""
-    category = request.category or 'add'
+    category = (request.category or 'add').strip()
     if category == "add":
         return f"{request.model} - {request.submodel}"
     elif category == "edit":
@@ -1225,7 +1225,7 @@ def create_admin_panel():
         
         if pending_requests:
             for request in pending_requests:
-                category_display = (request.category or 'add').upper()
+                category_display = (request.category or 'add').strip().upper()
                 with st.expander(f"🔍 {category_display} Request #{request.id}: {request.brand} - {request.model} - {request.submodel}", expanded=False):
                     col1, col2 = st.columns([2, 1])
                     
@@ -1300,14 +1300,14 @@ def create_admin_panel():
             # Apply filters
             filtered_requests = approved_requests
             if category_filter != "All":
-                filtered_requests = [r for r in filtered_requests if (r.category or 'add') == category_filter.lower()]
+                filtered_requests = [r for r in filtered_requests if (r.category or 'add').strip() == category_filter.lower()]
             if date_filter != "All":
                 selected_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
                 filtered_requests = [r for r in filtered_requests if r.processed_at and r.processed_at.date() == selected_date]
             
             if filtered_requests:
                 for request in filtered_requests:
-                    category_display = (request.category or 'add').upper()
+                    category_display = (request.category or 'add').strip().upper()
                     exec_status = request.edit_status or 'pending'
                     
                     # Status indicators
@@ -1400,7 +1400,7 @@ def create_admin_panel():
                 filtered_requests = [r for r in filtered_requests if (r.edit_status or 'pending').lower() == execution_filter.lower()]
             
             if category_filter != "All":
-                filtered_requests = [r for r in filtered_requests if (r.category or 'add') == category_filter.lower()]
+                filtered_requests = [r for r in filtered_requests if (r.category or 'add').strip() == category_filter.lower()]
             
             if date_filter != "All":
                 selected_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
@@ -1410,7 +1410,7 @@ def create_admin_panel():
                 # Create table data
                 table_data = []
                 for request in filtered_requests:
-                    category = request.category or 'add'
+                    category = (request.category or 'add').strip()
                     category_icon = {"add": "➕", "edit": "✏️", "delete": "🗑️"}[category]
                     status_icon = "✅" if request.status == "approved" else ("❌" if request.status == "rejected" else "⏳")
                     
@@ -1463,12 +1463,10 @@ def create_keyword_manager():
     
     if selected_brand:
         # Operation tabs
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        tab1, tab2, tab3, tab4 = st.tabs([
             "🆕 Add Model/Submodel", 
-            "➕ Add Size/Material", 
-            "✏️ Edit Size/Material", 
-            "🗑️ Delete Size/Material",
-            "📝 Edit Submodel Name",
+            "📋 Manage Size/Material", 
+            " Edit Submodel Name",
             "❌ Delete Submodel"
         ])
         
@@ -1476,18 +1474,12 @@ def create_keyword_manager():
             show_add_model_interface(selected_brand)
         
         with tab2:
-            show_add_interface(selected_brand)
+            show_manage_size_material_interface(selected_brand)
         
         with tab3:
-            show_edit_interface(selected_brand)
-        
-        with tab4:
-            show_delete_interface(selected_brand)
-        
-        with tab5:
             show_edit_submodel_interface(selected_brand)
         
-        with tab6:
+        with tab4:
             show_delete_submodel_interface(selected_brand)
 
 def show_add_model_interface(brand):
@@ -1527,8 +1519,9 @@ def show_add_model_interface(brand):
             else:
                 st.error("❌ Failed to add new model/submodel")
 
-def show_add_interface(brand):
-    """Show interface for adding sizes/materials"""
+def show_manage_size_material_interface(brand):
+    """Unified interface for managing sizes and materials - Add, Edit, Delete all in one"""
+    st.markdown("#### 📋 Manage Sizes & Materials")
     st.info("💡 **Note:** To add a completely new model/submodel, use the 'Add Model/Submodel' tab instead.")
     
     # Get models for the brand
@@ -1537,19 +1530,17 @@ def show_add_interface(brand):
         st.warning(f"No models found for {brand}. Please add a model first using the 'Add Model/Submodel' tab.")
         return
     
-    # Model selection (separate dropdowns for Model and Submodel)
-    # Get unique collections (models) for the brand
+    # Model selection
     unique_collections = sorted(list(set([m[2] for m in models])))
-    selected_collection = st.selectbox("Model (Collection):", [""] + unique_collections, key="add_collection_select")
+    selected_collection = st.selectbox("Model (Collection):", [""] + unique_collections, key="manage_collection_select")
     
     # Submodel dropdown
     if selected_collection:
-        # Get submodels for the selected collection
         submodels_for_collection = [m for m in models if m[2] == selected_collection]
         submodel_options = [m[1] for m in submodels_for_collection]
-        selected_submodel = st.selectbox("Submodel:", [""] + submodel_options, key="add_submodel_select")
+        selected_submodel = st.selectbox("Submodel:", [""] + submodel_options, key="manage_submodel_select")
     else:
-        selected_submodel = st.selectbox("Submodel:", [""], key="add_submodel_select_empty")
+        selected_submodel = st.selectbox("Submodel:", [""], key="manage_submodel_select_empty")
     
     if selected_collection and selected_submodel:
         # Find the model ID
@@ -1560,11 +1551,14 @@ def show_add_interface(brand):
                 break
     
         if model_id:
-            # Selection between Size or Material
-            add_type = st.selectbox("Select what to add:", ["Size", "Material"], key="add_type_select")
+            st.markdown("---")
             
-            if add_type == "Size":
-                # Add Size Section
+            # Add New Size/Material Section at the top
+            st.markdown("### ➕ Add New Size or Material")
+            
+            col_add1, col_add2 = st.columns(2)
+            
+            with col_add1:
                 st.markdown("##### 📏 Add Size")
                 with st.form("add_size_form"):
                     new_size = st.text_input("New Size:", placeholder="Enter new size")
@@ -1577,8 +1571,7 @@ def show_add_interface(brand):
                         else:
                             st.error("❌ Failed to add size")
             
-            else:  # Material
-                # Add Material Section
+            with col_add2:
                 st.markdown("##### 🧵 Add Material")
                 with st.form("add_material_form"):
                     new_material = st.text_input("New Material:", placeholder="Enter new material")
@@ -1590,6 +1583,97 @@ def show_add_interface(brand):
                             st.rerun()
                         else:
                             st.error("❌ Failed to add material")
+            
+            st.markdown("---")
+            
+            # Current Sizes and Materials Section with Edit/Delete
+            st.markdown("### 📋 Current Sizes & Materials")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**📏 Sizes**")
+                sizes = get_sizes_for_model(model_id)
+                if sizes:
+                    for size in sizes:
+                        with st.container():
+                            size_col1, size_col2 = st.columns([3, 2])
+                            
+                            with size_col1:
+                                # Editable text input for size
+                                new_size_value = st.text_input(
+                                    "Size:",
+                                    value=size[1],
+                                    key=f"edit_size_{size[0]}",
+                                    label_visibility="collapsed"
+                                )
+                            
+                            with size_col2:
+                                # Save and Delete buttons side by side
+                                btn_col1, btn_col2 = st.columns(2)
+                                with btn_col1:
+                                    if st.button("💾 Save", key=f"save_size_{size[0]}", type="secondary"):
+                                        if new_size_value.strip() and new_size_value.strip() != size[1]:
+                                            if update_size(size[0], new_size_value.strip()):
+                                                st.success(f"✅ Updated size to '{new_size_value.strip()}'")
+                                                st.rerun()
+                                            else:
+                                                st.error("❌ Failed to update size")
+                                        elif new_size_value.strip() == size[1]:
+                                            st.info("💡 No changes to save")
+                                        else:
+                                            st.error("❌ Size cannot be empty")
+                                with btn_col2:
+                                    if st.button("🗑️ Delete", key=f"delete_size_{size[0]}", type="secondary"):
+                                        if delete_size(size[0]):
+                                            st.success(f"✅ Deleted size '{size[1]}'")
+                                            st.rerun()
+                                        else:
+                                            st.error("❌ Failed to delete size")
+                else:
+                    st.info("No sizes found for this model")
+            
+            with col2:
+                st.markdown("**🧵 Materials**")
+                materials = get_materials_for_model(model_id)
+                if materials:
+                    for material in materials:
+                        with st.container():
+                            mat_col1, mat_col2 = st.columns([3, 2])
+                            
+                            with mat_col1:
+                                # Editable text input for material
+                                new_material_value = st.text_input(
+                                    "Material:",
+                                    value=material[1],
+                                    key=f"edit_material_{material[0]}",
+                                    label_visibility="collapsed"
+                                )
+                            
+                            with mat_col2:
+                                # Save and Delete buttons side by side
+                                btn_col1, btn_col2 = st.columns(2)
+                                with btn_col1:
+                                    if st.button("💾 Save", key=f"save_material_{material[0]}", type="secondary"):
+                                        if new_material_value.strip() and new_material_value.strip() != material[1]:
+                                            if update_material(material[0], new_material_value.strip()):
+                                                st.success(f"✅ Updated material to '{new_material_value.strip()}'")
+                                                st.rerun()
+                                            else:
+                                                st.error("❌ Failed to update material")
+                                        elif new_material_value.strip() == material[1]:
+                                            st.info("💡 No changes to save")
+                                        else:
+                                            st.error("❌ Material cannot be empty")
+                                with btn_col2:
+                                    if st.button("🗑️ Delete", key=f"delete_material_{material[0]}", type="secondary"):
+                                        if delete_material(material[0]):
+                                            st.success(f"✅ Deleted material '{material[1]}'")
+                                            st.rerun()
+                                        else:
+                                            st.error("❌ Failed to delete material")
+                else:
+                    st.info("No materials found for this model")
 
 def show_edit_interface(brand):
     """Show interface for editing sizes/materials"""
@@ -2192,7 +2276,7 @@ def main():
     if not authenticate_user():
         return
     
-    st.title("📝 Model Request System")
+    st.title("📝 Keywords Manager v2.0")
     st.markdown("---")
     
     # Initialize database
@@ -2214,22 +2298,22 @@ def main():
         
         # Navigation based on role
         if user_role == "admin":
-            page = st.radio("Navigation:", [
+            page = st.radio("Menu:", [
                 "📝 Submit Request", 
-                "📋 My Requests",
-                "📊 Model Size/Material Table", 
+                "📋 All Requests",
+                "📊 Brand Keywords", 
                 "👑 Admin Panel",
                 "🔧 Keyword Manager"
             ])
         else:  # user
             page = st.radio("Navigation:", [
                 "📝 Submit Request", 
-                "📋 My Requests",
-                "📊 Model Size/Material Table"
+                "📋 All Requests",
+                "📊 Brand Keywords"
             ])
         
         st.markdown("---")
-        st.caption("Model Request System v3.0")
+        st.caption("Keywords Manager v2.0")
         with st.expander("🔍 Database Status", expanded=False):
             req_engine = get_request_db_engine()
             main_engine = get_main_db_engine()
@@ -2241,15 +2325,15 @@ def main():
     # Main content
     if page == "📝 Submit Request":
         create_model_request_form()
-    elif page == "📋 My Requests":
+    elif page == "📋 All Requests":
         show_user_requests()
-    elif page == "📊 Model Size/Material Table":
+    elif page == "📊 Brand Keywords":
         show_model_size_material_table()
     elif page == "👑 Admin Panel":
         create_admin_panel()
     elif page == "🔧 Keyword Manager":
         create_keyword_manager()
-    elif page == "� Superuser Panel":
+    elif page == "🔧 Superuser Panel":
         create_superuser_panel()
 
 if __name__ == "__main__":

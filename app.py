@@ -92,7 +92,7 @@ else:
 # Database configuration
 db_config = {
     'user': 'postgres',
-    'password': '8558',
+    'password': 'jipjipmoneydata',
     'host': '192.168.1.111',
     'port': '5432',
     'database': 'jipjipmoney'
@@ -1138,6 +1138,25 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
     keep_as_fixed = True
     
     if st.button("💾 Save Changes", type="primary", use_container_width=True, key=f"save_btn_{context}"):
+        # Validate required fields
+        validation_errors = []
+        
+        if not selected_brand or selected_brand.strip() == '':
+            validation_errors.append("Brand is required")
+        
+        if not selected_model or selected_model.strip() == '':
+            validation_errors.append("Model is required")
+        
+        if not selected_submodel or selected_submodel.strip() == '':
+            validation_errors.append("Sub-Model is required")
+        
+        # If there are validation errors, show them and don't save
+        if validation_errors:
+            for error in validation_errors:
+                st.error(f"❌ {error}")
+            st.warning("⚠️ Please fill in all required fields before saving.")
+            return
+        
         # Prepare updated data
         updated_data = {
             'Types': selected_type,
@@ -1429,6 +1448,25 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
     
     # Action buttons
     if st.button("💾 Save Changes", type="primary", use_container_width=True, key="fixed_save_btn"):
+        # Validate required fields
+        validation_errors = []
+        
+        if not selected_brand or selected_brand.strip() == '':
+            validation_errors.append("Brand is required")
+        
+        if not selected_model or selected_model.strip() == '':
+            validation_errors.append("Model is required")
+        
+        if not selected_submodel or selected_submodel.strip() == '':
+            validation_errors.append("Sub-Model is required")
+        
+        # If there are validation errors, show them and don't save
+        if validation_errors:
+            for error in validation_errors:
+                st.error(f"❌ {error}")
+            st.warning("⚠️ Please fill in all required fields before saving.")
+            return
+        
         # Prepare updated data
         updated_data = {
             'Types': selected_type,
