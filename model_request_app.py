@@ -44,13 +44,13 @@ MAIN_DB_CONFIG = {
     'database': 'jipjipmoney'
 }
 
-# User credentials
+# User credentials with roles
 USER_CREDENTIALS = {
-    "admin": "admin8558",
-    "Build@CS": "NRJ24017", 
-    "Pin@SCL": "NRJ23006",
-    "Knight@SCL": "NRJ23004",
-    "Gun@SCL": "NRJ24027"
+    "admin": {"password": "admin8558", "role": "admin"},  # Can approve/reject and execute requests
+    "Build@CS": {"password": "NRJ24017", "role": "user"}, 
+    "Pin@SCL": {"password": "NRJ23006", "role": "admin"},
+    "Knight@SCL": {"password": "NRJ23004", "role": "user"},
+    "Gun@SCL": {"password": "NRJ24027", "role": "user"}
 }
 
 # SQLAlchemy Base
@@ -61,6 +61,7 @@ def authenticate_user():
     if 'authenticated' not in st.session_state:
         st.session_state.authenticated = False
         st.session_state.username = None
+        st.session_state.user_role = None
     
     if not st.session_state.authenticated:
         show_login_page()
@@ -86,19 +87,21 @@ def show_login_page():
                 if check_credentials(username, password):
                     st.session_state.authenticated = True
                     st.session_state.username = username
-                    st.success(f"✅ Welcome, {username}!")
+                    st.session_state.user_role = USER_CREDENTIALS[username]["role"]
+                    st.success(f"✅ Welcome, {username}! ({USER_CREDENTIALS[username]['role'].title()})")
                     st.rerun()
                 else:
                     st.error("❌ Invalid username or password")
 
 def check_credentials(username, password):
     """Check if username and password are valid"""
-    return username in USER_CREDENTIALS and USER_CREDENTIALS[username] == password
+    return username in USER_CREDENTIALS and USER_CREDENTIALS[username]["password"] == password
 
 def logout_user():
     """Handle user logout"""
     st.session_state.authenticated = False
     st.session_state.username = None
+    st.session_state.user_role = None
     st.rerun()
 
 class ModelRequest(Base):
@@ -110,14 +113,18 @@ class ModelRequest(Base):
     brand = Column(String(100), nullable=False)
     model = Column(String(100), nullable=False)
     submodel = Column(String(100), nullable=False)
-    sizes = Column(Text, nullable=False)  # Store as comma-separated values
+    sizes = Column(Text, nullable=True)  # Store as comma-separated values
     materials = Column(Text, nullable=True)  # Store as comma-separated values
     notes = Column(Text, nullable=True)
     status = Column(String(20), default='pending')  # pending, approved, rejected
     submitted_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    processed_by = Column(String(100), nullable=True)
+    processed_by = Column(String(100), nullable=True)  # Admin who approved/rejected
     processed_at = Column(DateTime, nullable=True)
     admin_notes = Column(Text, nullable=True)
+    
+    # Simplified fields for the workflow
+    category = Column(String(20), nullable=True, default='add')  # add, edit, delete
+    edit_status = Column(String(20), nullable=True, default='pending')  # pending, done (for approved requests)
 
 def get_request_db_engine():
     """Create engine for request_model database"""
@@ -178,11 +185,12 @@ def save_model_request(request_data):
         new_request = ModelRequest(
             requested_by=request_data['requested_by'],
             brand=request_data['brand'],
-            model=request_data['model'],
-            submodel=request_data['submodel'],
-            sizes=request_data['sizes'] or '',  # Handle None case
-            materials=request_data['materials'],
-            notes=request_data['notes']
+            model=request_data.get('model', ''),
+            submodel=request_data.get('submodel', ''),
+            sizes=request_data.get('sizes', ''),
+            materials=request_data.get('materials', ''),
+            notes=request_data.get('notes', ''),
+            category=request_data.get('category', 'add')
         )
         
         session.add(new_request)
@@ -231,7 +239,7 @@ def load_processed_requests():
         return []
 
 def update_request_status(request_id, status, processed_by, admin_notes=None):
-    """Update request status"""
+    """Update request status (supervisor approval/rejection)"""
     try:
         engine = get_request_db_engine()
         if not engine:
@@ -248,11 +256,11 @@ def update_request_status(request_id, status, processed_by, admin_notes=None):
             if admin_notes:
                 request.admin_notes = admin_notes
             
-            session.commit()
-            
-            # If approved, insert into main database
+            # If approved, set edit_status to pending (waiting for superuser execution)
             if status == 'approved':
-                insert_approved_request_to_main_db(request)
+                request.edit_status = 'pending'
+            
+            session.commit()
         
         session.close()
         return True
@@ -260,8 +268,52 @@ def update_request_status(request_id, status, processed_by, admin_notes=None):
         st.error(f"❌ Failed to update request: {e}")
         return False
 
-def insert_approved_request_to_main_db(request):
-    """Insert approved request into jipjipmoney database"""
+def update_edit_status(request_id, edit_status, executed_by):
+    """Update edit status (superuser execution)"""
+    try:
+        engine = get_request_db_engine()
+        if not engine:
+            return False
+        
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        request = session.query(ModelRequest).filter(ModelRequest.id == request_id).first()
+        if request:
+            request.edit_status = edit_status
+            request.executed_by = executed_by
+            request.executed_at = datetime.now(timezone.utc)
+            session.commit()
+        
+        session.close()
+        return True
+    except Exception as e:
+        st.error(f"❌ Failed to update edit status: {e}")
+        return False
+
+def load_approved_pending_requests():
+    """Load approved requests that are pending execution"""
+    try:
+        engine = get_request_db_engine()
+        if not engine:
+            return []
+        
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        requests = session.query(ModelRequest).filter(
+            ModelRequest.status == 'approved',
+            ModelRequest.edit_status == 'pending'
+        ).order_by(ModelRequest.processed_at.desc()).all()
+        
+        session.close()
+        return requests
+    except Exception as e:
+        st.error(f"❌ Failed to load approved pending requests: {e}")
+        return []
+
+def execute_approved_request(request):
+    """Execute approved request in main database"""
     try:
         engine = get_main_db_engine()
         if not engine:
@@ -269,471 +321,512 @@ def insert_approved_request_to_main_db(request):
             return False
         
         with engine.begin() as conn:
-            # Get or create brand
+            category = request.category or 'add'
+            if category == 'add':
+                return execute_add_request(conn, request)
+            elif category == 'edit':
+                return execute_edit_request(conn, request)
+            elif category == 'delete':
+                return execute_delete_request(conn, request)
+            else:
+                st.error(f"❌ Unknown category: {category}")
+                return False
+        
+    except Exception as e:
+        st.error(f"❌ Failed to execute request: {e}")
+        return False
+
+def execute_add_request(conn, request):
+    """Execute add request in main database"""
+    try:
+        # Get or create brand
+        brand_result = conn.execute(
+            text("SELECT id FROM brands WHERE UPPER(name) = UPPER(:brand_name)"),
+            {"brand_name": request.brand}
+        ).fetchone()
+        
+        if brand_result:
+            brand_id = brand_result[0]
+        else:
+            # Create new brand
             brand_result = conn.execute(
-                text("SELECT id FROM brands WHERE UPPER(name) = UPPER(:brand_name)"),
+                text("INSERT INTO brands (name) VALUES (:brand_name) RETURNING id"),
                 {"brand_name": request.brand}
-            ).fetchone()
-            
-            if brand_result:
-                brand_id = brand_result[0]
-            else:
-                # Create new brand
-                brand_result = conn.execute(
-                    text("INSERT INTO brands (name) VALUES (:brand_name) RETURNING id"),
-                    {"brand_name": request.brand}
-                )
-                brand_id = brand_result.fetchone()[0]
-            
-            # Get or create model (swap model and collection logic)
+            )
+            brand_id = brand_result.fetchone()[0]
+        
+        # Get or create model
+        model_result = conn.execute(
+            text("SELECT id FROM models WHERE brand_id = :brand_id AND UPPER(model_name) = UPPER(:model_name) AND UPPER(collection) = UPPER(:collection)"),
+            {"brand_id": brand_id, "model_name": request.submodel, "collection": request.model}
+        ).fetchone()
+        
+        if model_result:
+            model_id = model_result[0]
+        else:
+            # Create new model
             model_result = conn.execute(
-                text("SELECT id FROM models WHERE brand_id = :brand_id AND UPPER(model_name) = UPPER(:model_name) AND UPPER(collection) = UPPER(:collection)"),
+                text("INSERT INTO models (brand_id, model_name, collection) VALUES (:brand_id, :model_name, :collection) RETURNING id"),
                 {"brand_id": brand_id, "model_name": request.submodel, "collection": request.model}
-            ).fetchone()
-            
-            if model_result:
-                model_id = model_result[0]
-            else:
-                # Create new model (collection is now the main category, model_name is the specific item)
-                model_result = conn.execute(
-                    text("INSERT INTO models (brand_id, model_name, collection) VALUES (:brand_id, :model_name, :collection) RETURNING id"),
-                    {"brand_id": brand_id, "model_name": request.submodel, "collection": request.model}
-                )
-                model_id = model_result.fetchone()[0]
-            
-            # Process sizes
-            if request.sizes:
-                sizes_list = [size.strip() for size in request.sizes.split(',')]
-                for size in sizes_list:
-                    if size:
-                        # Check if size already exists
-                        size_result = conn.execute(
-                            text("SELECT id FROM model_sizes WHERE model_id = :model_id AND UPPER(size) = UPPER(:size)"),
+            )
+            model_id = model_result.fetchone()[0]
+        
+        # Process sizes
+        if request.sizes:
+            sizes_list = [size.strip() for size in request.sizes.split(',')]
+            for size in sizes_list:
+                if size:
+                    # Check if size already exists
+                    size_result = conn.execute(
+                        text("SELECT id FROM model_sizes WHERE model_id = :model_id AND UPPER(size) = UPPER(:size)"),
+                        {"model_id": model_id, "size": size}
+                    ).fetchone()
+                    
+                    if not size_result:
+                        conn.execute(
+                            text("INSERT INTO model_sizes (model_id, size) VALUES (:model_id, :size)"),
                             {"model_id": model_id, "size": size}
-                        ).fetchone()
-                        
-                        if not size_result:
-                            conn.execute(
-                                text("INSERT INTO model_sizes (model_id, size) VALUES (:model_id, :size)"),
-                                {"model_id": model_id, "size": size}
-                            )
-            
-            # Process materials
-            if request.materials:
-                materials_list = [material.strip() for material in request.materials.split(',')]
-                for material in materials_list:
-                    if material:
-                        # Check if material already exists
-                        material_result = conn.execute(
-                            text("SELECT id FROM model_materials WHERE model_id = :model_id AND UPPER(material) = UPPER(:material)"),
+                        )
+        
+        # Process materials
+        if request.materials:
+            materials_list = [material.strip() for material in request.materials.split(',')]
+            for material in materials_list:
+                if material:
+                    # Check if material already exists
+                    material_result = conn.execute(
+                        text("SELECT id FROM model_materials WHERE model_id = :model_id AND UPPER(material) = UPPER(:material)"),
+                        {"model_id": model_id, "material": material}
+                    ).fetchone()
+                    
+                    if not material_result:
+                        conn.execute(
+                            text("INSERT INTO model_materials (model_id, material) VALUES (:model_id, :material)"),
                             {"model_id": model_id, "material": material}
-                        ).fetchone()
-                        
-                        if not material_result:
-                            conn.execute(
-                                text("INSERT INTO model_materials (model_id, material) VALUES (:model_id, :material)"),
-                                {"model_id": model_id, "material": material}
-                            )
+                        )
         
         return True
         
     except Exception as e:
-        st.error(f"❌ Failed to insert into main database: {e}")
+        st.error(f"❌ Failed to execute add request: {e}")
+        return False
+
+def execute_edit_request(conn, request):
+    """Execute edit request in main database"""
+    try:
+        # Parse the edit request format: "old_value → new_value"
+        if "→" in request.model:
+            old_model, new_model = request.model.split("→")
+            old_model = old_model.strip()
+            new_model = new_model.strip()
+            
+            # Update model collection
+            result = conn.execute(
+                text("""UPDATE models SET collection = :new_model 
+                        WHERE collection = :old_model 
+                        AND brand_id = (SELECT id FROM brands WHERE name = :brand_name)"""),
+                {"new_model": new_model, "old_model": old_model, "brand_name": request.brand}
+            )
+            
+            if result.rowcount > 0:
+                st.success(f"✅ Updated {result.rowcount} model(s) from '{old_model}' to '{new_model}'")
+        
+        if "→" in request.submodel:
+            old_submodel, new_submodel = request.submodel.split("→")
+            old_submodel = old_submodel.strip()
+            new_submodel = new_submodel.strip()
+            
+            # Update model name (submodel)
+            result = conn.execute(
+                text("""UPDATE models SET model_name = :new_submodel 
+                        WHERE model_name = :old_submodel 
+                        AND brand_id = (SELECT id FROM brands WHERE name = :brand_name)"""),
+                {"new_submodel": new_submodel, "old_submodel": old_submodel, "brand_name": request.brand}
+            )
+            
+            if result.rowcount > 0:
+                st.success(f"✅ Updated {result.rowcount} submodel(s) from '{old_submodel}' to '{new_submodel}'")
+        
+        # Handle size edits if specified
+        if request.sizes and "→" in request.sizes:
+            old_size, new_size = request.sizes.split("→")
+            old_size = old_size.strip()
+            new_size = new_size.strip()
+            
+            result = conn.execute(
+                text("""UPDATE model_sizes SET size = :new_size 
+                        WHERE size = :old_size 
+                        AND model_id IN (
+                            SELECT m.id FROM models m 
+                            JOIN brands b ON m.brand_id = b.id 
+                            WHERE b.name = :brand_name
+                        )"""),
+                {"new_size": new_size, "old_size": old_size, "brand_name": request.brand}
+            )
+            
+            if result.rowcount > 0:
+                st.success(f"✅ Updated {result.rowcount} size(s) from '{old_size}' to '{new_size}'")
+        
+        # Handle material edits if specified
+        if request.materials and "→" in request.materials:
+            old_material, new_material = request.materials.split("→")
+            old_material = old_material.strip()
+            new_material = new_material.strip()
+            
+            result = conn.execute(
+                text("""UPDATE model_materials SET material = :new_material 
+                        WHERE material = :old_material 
+                        AND model_id IN (
+                            SELECT m.id FROM models m 
+                            JOIN brands b ON m.brand_id = b.id 
+                            WHERE b.name = :brand_name
+                        )"""),
+                {"new_material": new_material, "old_material": old_material, "brand_name": request.brand}
+            )
+            
+            if result.rowcount > 0:
+                st.success(f"✅ Updated {result.rowcount} material(s) from '{old_material}' to '{new_material}'")
+        
+        return True
+        
+    except Exception as e:
+        st.error(f"❌ Failed to execute edit request: {e}")
+        return False
+
+def execute_delete_request(conn, request):
+    """Execute delete request in main database"""
+    try:
+        # Find the model(s) to delete based on brand, model, and submodel
+        models_result = conn.execute(
+            text("""SELECT m.id, m.model_name, m.collection FROM models m 
+                    JOIN brands b ON m.brand_id = b.id 
+                    WHERE b.name = :brand_name 
+                    AND m.collection = :model_name 
+                    AND m.model_name = :submodel_name"""),
+            {"brand_name": request.brand, "model_name": request.model, "submodel_name": request.submodel}
+        ).fetchall()
+        
+        if not models_result:
+            st.warning(f"⚠️ No models found matching {request.brand} - {request.model} - {request.submodel}")
+            return True  # Not an error, just nothing to delete
+        
+        deleted_count = 0
+        
+        for model_row in models_result:
+            model_id = model_row[0]
+            model_name = model_row[1]
+            collection = model_row[2]
+            
+            # If specific sizes are mentioned, delete only those sizes
+            if request.sizes:
+                sizes_to_delete = [size.strip() for size in request.sizes.split(',')]
+                for size in sizes_to_delete:
+                    if size:
+                        result = conn.execute(
+                            text("DELETE FROM model_sizes WHERE model_id = :model_id AND size = :size"),
+                            {"model_id": model_id, "size": size}
+                        )
+                        if result.rowcount > 0:
+                            st.success(f"✅ Deleted size '{size}' from {collection} - {model_name}")
+                            deleted_count += result.rowcount
+            
+            # If specific materials are mentioned, delete only those materials
+            if request.materials:
+                materials_to_delete = [material.strip() for material in request.materials.split(',')]
+                for material in materials_to_delete:
+                    if material:
+                        result = conn.execute(
+                            text("DELETE FROM model_materials WHERE model_id = :model_id AND material = :material"),
+                            {"model_id": model_id, "material": material}
+                        )
+                        if result.rowcount > 0:
+                            st.success(f"✅ Deleted material '{material}' from {collection} - {model_name}")
+                            deleted_count += result.rowcount
+            
+            # If no specific sizes or materials mentioned, delete the entire model
+            if not request.sizes and not request.materials:
+                # Delete all sizes for this model
+                sizes_result = conn.execute(
+                    text("DELETE FROM model_sizes WHERE model_id = :model_id"),
+                    {"model_id": model_id}
+                )
+                
+                # Delete all materials for this model
+                materials_result = conn.execute(
+                    text("DELETE FROM model_materials WHERE model_id = :model_id"),
+                    {"model_id": model_id}
+                )
+                
+                # Delete the model itself
+                model_result = conn.execute(
+                    text("DELETE FROM models WHERE id = :model_id"),
+                    {"model_id": model_id}
+                )
+                
+                if model_result.rowcount > 0:
+                    st.success(f"✅ Deleted entire model: {collection} - {model_name} (including {sizes_result.rowcount} sizes and {materials_result.rowcount} materials)")
+                    deleted_count += 1
+        
+        if deleted_count == 0:
+            st.warning("⚠️ Nothing was deleted - items may not exist or already deleted")
+        
+        return True
+        
+    except Exception as e:
+        st.error(f"❌ Failed to execute delete request: {e}")
         return False
 
 def create_model_request_form():
-    """Create the model request form"""
+    """Create the comprehensive model request form with add/edit/delete categories"""
     st.subheader("📝 Submit New Model Request")
+    
+    # Category selection
+    category = st.selectbox(
+        "Request Category *",
+        ["add", "edit", "delete"],
+        format_func=lambda x: {"add": "➕ Add", "edit": "✏️ Edit", "delete": "🗑️ Delete"}[x]
+    )
+    
     existing_brands = get_existing_brands()
     brands_options = [''] + sorted(existing_brands) if existing_brands else ['']
 
     selected_brand = st.selectbox(
         "Brand *",
-        brands_options
+        brands_options,
+        key="brand_select"
     )
 
-    with st.form("model_request_form"):
+    if category == "add":
+        create_add_request_form(selected_brand)
+    elif category == "edit":
+        create_edit_request_form(selected_brand)
+    elif category == "delete":
+        create_delete_request_form(selected_brand)
+
+def create_add_request_form(selected_brand):
+    """Create form for adding new items"""
+    st.markdown("#### ➕ Add New Item")
+    
+    with st.form("add_request_form"):
         col1, col2 = st.columns(2)
-
+        
         with col1:
-            # Model input (main category)
-            collection_name = st.text_input(
-                "Model *",
-                placeholder="Enter model name (e.g., Vintage, Chevron, Classic Line)"
-            )
-            # Size input - support both single and multiple sizes
-            size_input = st.text_input(
-                "Sizes",
-                placeholder="Enter sizes (e.g., 7,8,9,10 or just 25) - Optional if adding materials only"
-            )
-
+            model_name = st.text_input("Model *", placeholder="e.g., Vintage, Chevron")
+            size_input = st.text_input("Sizes", placeholder="e.g., 7,8,9,10 (separate with commas)")
         with col2:
-            # Submodel input (specific item within model)
-            model_name = st.text_input(
-                "Submodel *",
-                placeholder="Enter specific submodel (e.g., Kelly, Diana, Classic)"
-            )
-            # Material input
-            material_input = st.text_input(
-                "Materials",
-                placeholder="Enter materials (e.g., Canvas, Leather) - Optional if adding sizes only"
-            )
-
-        # Additional notes
-        notes = st.text_area(
-            "Additional Notes",
-            placeholder="Any additional information or special requests..."
-        )
-
-        # Submit button
-        submitted = st.form_submit_button("📤 Submit Request", type="primary")
-
+            submodel_name = st.text_input("Submodel *", placeholder="e.g., Kelly, Diana")
+            material_input = st.text_input("Materials", placeholder="e.g., Canvas, Leather (separate with commas)")
+        
+        notes = st.text_area("Additional Notes", placeholder="Any additional information...")
+        submitted = st.form_submit_button("📤 Submit Add Request", type="primary")
+        
         if submitted:
-            # Validate required fields
             if not selected_brand:
                 st.error("❌ Please select a brand")
                 return
-
-            if not model_name.strip():
-                st.error("❌ Please enter a submodel name")
+            
+            if not model_name.strip() or not submodel_name.strip():
+                st.error("❌ Please enter both model and submodel names")
                 return
-
-            if not collection_name.strip():
-                st.error("❌ Please enter a model name")
-                return
-
-            # At least one of sizes or materials must be provided
-            if not size_input.strip() and not material_input.strip():
-                st.error("❌ Please enter at least sizes or materials (or both)")
-                return
-
-            # Prepare request data using logged-in username (model goes to model field, submodel goes to submodel field)
+                
             request_data = {
                 'requested_by': st.session_state.username,
-                'brand': selected_brand.strip(),
-                'model': collection_name.strip(),  # Model goes to model field
-                'submodel': model_name.strip(),    # Submodel goes to submodel field
-                'sizes': size_input.strip() if size_input.strip() else None,
-                'materials': material_input.strip() if material_input.strip() else None,
-                'notes': notes.strip() if notes.strip() else None
+                'brand': selected_brand,
+                'category': 'add',
+                'model': model_name.strip(),
+                'submodel': submodel_name.strip(),
+                'sizes': size_input.strip() or None,
+                'materials': material_input.strip() or None,
+                'notes': notes.strip() or None
             }
-
-            # Save request
+            
             if save_model_request(request_data):
-                st.success("✅ Request submitted successfully!")
-                st.info(" Your request will be reviewed by an administrator.")
-                # Clear the form by rerunning the app
-                st.balloons()
+                st.success("✅ Add request submitted successfully!")
                 st.rerun()
-            else:
-                st.error("❌ Failed to submit request. Please try again.")
 
-    # Show all requests with statuses
-    st.subheader("📋 All Requests")
-    all_requests = load_pending_requests() + load_processed_requests()
-
-    if all_requests:
-        # Create table data for all requests
-        table_data = []
-        for request in all_requests:
-            status_icon = "✅" if request.status == "approved" else ("❌" if request.status == "rejected" else "⏳")
-            table_data.append({
-                'ID': request.id,
-                'Requested By': request.requested_by,
-                'Brand': request.brand,
-                'Model': request.model,        # Model is stored in model field
-                'Submodel': request.submodel,  # Submodel is stored in submodel field
-                'Sizes': request.sizes,
-                'Materials': request.materials or 'N/A',
-                'Status': f"{status_icon} {request.status.title()}",
-                'Submitted': request.submitted_at.strftime('%Y-%m-%d %H:%M')
-            })
-
-        # Display table
-        df = pd.DataFrame(table_data)
-        st.dataframe(df, use_container_width=True)
-    else:
-        st.info("📭 No requests found at the moment.")
-
-def create_model_delete_request_form():
-    """Form for users to request deletion of a model from the main database"""
-    st.subheader("🗑️ Request Model Deletion from Main Database")
-    existing_brands = get_existing_brands()
-    brands_options = [''] + sorted(existing_brands) if existing_brands else ['']
-
-    selected_brand = st.selectbox(
-        "Brand * (for deletion)",
-        brands_options,
-        key="delete_brand_select"
-    )
-
-    model_name = st.text_input(
-        "Model Name * (for deletion)",
-        placeholder="Enter model name to delete (e.g., Neverfull, Speedy)",
-        key="delete_model_name"
-    )
-
-    notes = st.text_area(
-        "Reason for Deletion",
-        placeholder="Why should this model be deleted?",
-        key="delete_notes"
-    )
-
-    submitted = st.button("🗑️ Submit Delete Request", type="primary", key="submit_delete_request")
-
-    if submitted:
-        if not selected_brand:
-            st.error("❌ Please select a brand")
-            return
-        if not model_name.strip():
-            st.error("❌ Please enter a model name")
-            return
-        if not notes.strip():
-            st.error("❌ Please provide a reason for deletion")
-            return
-        # Save as a special request type
-        request_data = {
-            'requested_by': st.session_state.username,
-            'brand': selected_brand.strip(),
-            'model': model_name.strip(),
-            'submodel': '',
-            'sizes': '',
-            'materials': '',
-            'notes': f"DELETE REQUEST: {notes.strip()}"
-        }
-        # Save request with status 'pending_delete'
-        if save_model_request(request_data):
-            st.success("✅ Delete request submitted successfully! Admin will review.")
-            st.balloons()
-            st.rerun()
-        else:
-            st.error("❌ Failed to submit delete request.")
-
-def admin_delete_size_material():
-    """Admin tool to delete, edit, and add sizes or materials from main database, with confirmation popup"""
-    st.subheader("🗑️ Admin: Manage Sizes and Materials")
-    brands = get_existing_brands()
-    if not brands:
-        st.info("No brands found in main database.")
-        return
-    selected_brand = st.selectbox("Brand", brands, key="delete_sm_brand")
-    engine = get_main_db_engine()
-    if not engine:
-        st.error("❌ Cannot connect to main database")
-        return
-    with engine.connect() as conn:
-        models = conn.execute(text("SELECT id, model_name, collection FROM models WHERE brand_id = (SELECT id FROM brands WHERE name = :brand) ORDER BY model_name"), {"brand": selected_brand}).fetchall()
-        if not models:
-            st.info("No models found for this brand.")
-            return
-        model_options = [f"{m[2]} ({m[1]})" for m in models]  # Show collection (model_name) format
-        selected_model_idx = st.selectbox("Model (Submodel)", model_options, key="delete_sm_model")
-        selected_model = models[model_options.index(selected_model_idx)]
-        model_id = selected_model[0]
-        model_name = selected_model[2]  # collection field is our "Model"
-        collection = selected_model[1]  # model_name field is our "Submodel"
-        
-        # Add new size/material section
-        st.markdown("---")
-        st.markdown("### ➕ Add New Size or Material")
+def create_edit_request_form(selected_brand):
+    """Create form for editing existing items"""
+    st.markdown("#### ✏️ Edit Existing Item")
+    st.info("💡 **Edit Format**: Use 'Old Value → New Value' format for edits")
+    
+    with st.form("edit_request_form"):
         col1, col2 = st.columns(2)
         
         with col1:
-            new_size = st.text_input("Add New Size", placeholder="Enter new size (e.g., 25, XL)", key="new_size_input")
-            if st.button("📝 Request Add Size", key="add_size_btn"):
-                if new_size.strip():
-                    # Create request for adding size
-                    request_data = {
-                        'requested_by': st.session_state.username,
-                        'brand': selected_brand,
-                        'model': model_name,      # Model (collection field)
-                        'submodel': collection,   # Submodel (model_name field)
-                        'sizes': new_size.strip(),
-                        'materials': '',
-                        'notes': f"ADD SIZE REQUEST: Add size '{new_size.strip()}' to {model_name} - {collection}"
-                    }
-                    if save_model_request(request_data):
-                        st.success(f"✅ Request to add size '{new_size}' submitted!")
-                        st.rerun()
-                else:
-                    st.error("❌ Please enter a size")
-        
+            model_name = st.text_input("Model Edit", placeholder="e.g., Vintage → Classic")
+            size_input = st.text_input("Size Edit", placeholder="e.g., 7 → Size 7 (optional)")
         with col2:
-            new_material = st.text_input("Add New Material", placeholder="Enter new material (e.g., Canvas, Leather)", key="new_material_input")
-            if st.button("📝 Request Add Material", key="add_material_btn"):
-                if new_material.strip():
-                    # Create request for adding material
-                    request_data = {
-                        'requested_by': st.session_state.username,
-                        'brand': selected_brand,
-                        'model': model_name,      # Model (collection field)
-                        'submodel': collection,   # Submodel (model_name field)
-                        'sizes': '',
-                        'materials': new_material.strip(),
-                        'notes': f"ADD MATERIAL REQUEST: Add material '{new_material.strip()}' to {model_name} - {collection}"
-                    }
-                    if save_model_request(request_data):
-                        st.success(f"✅ Request to add material '{new_material}' submitted!")
-                        st.rerun()
-                else:
-                    st.error("❌ Please enter a material")
+            submodel_name = st.text_input("Submodel Edit", placeholder="e.g., Kelly → Kelly 25")
+            material_input = st.text_input("Material Edit", placeholder="e.g., Canvas → Leather (optional)")
         
-        st.markdown("---")
+        st.markdown("**Examples:**")
+        st.markdown("- Model: `Vintage → Classic` (changes all Vintage to Classic)")
+        st.markdown("- Submodel: `Kelly → Kelly 25` (changes all Kelly to Kelly 25)")
+        st.markdown("- Size: `7 → Size 7` (changes size '7' to 'Size 7')")
+        st.markdown("- Material: `Canvas → Leather` (changes Canvas to Leather)")
         
-        # Show all sizes
-        sizes = conn.execute(text("SELECT id, size FROM model_sizes WHERE model_id = :model_id ORDER BY size"), {"model_id": model_id}).fetchall()
-        st.markdown("<h3 style='text-align: center;'>Sizes</h3>", unsafe_allow_html=True)
-        if sizes:
-            for size_row in sizes:
-                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
-                with col1:
-                    st.write(size_row[1])
-                with col2:
-                    if st.button(f"✏️ Edit", key=f"edit_size_{size_row[0]}"):
-                        st.session_state['edit_item'] = {
-                            'type': 'size',
-                            'id': size_row[0],
-                            'name': size_row[1],
-                            'model_id': model_id,
-                            'model_name': model_name,     # Model (collection field)
-                            'collection': collection,     # Submodel (model_name field)
-                            'brand': selected_brand
-                        }
-                        st.session_state['show_edit_modal'] = True
-                with col3:
-                    if st.button(f"🗑️ Delete", key=f"delete_size_{size_row[0]}"):
-                        st.session_state['confirm_delete'] = {
-                            'type': 'size',
-                            'id': size_row[0],
-                            'name': size_row[1],
-                            'model_id': model_id
-                        }
-                        st.session_state['show_delete_modal'] = True
-        else:
-            st.info("No sizes found for this model.")
+        notes = st.text_area("Reason for Edit", placeholder="Why is this edit needed?")
+        submitted = st.form_submit_button("📤 Submit Edit Request", type="primary")
         
-        # Show all materials
-        materials = conn.execute(text("SELECT id, material FROM model_materials WHERE model_id = :model_id ORDER BY material"), {"model_id": model_id}).fetchall()
-        st.markdown("<h3 style='text-align: center;'>Materials</h3>", unsafe_allow_html=True)
-        if materials:
-            for mat_row in materials:
-                col1, col2, col3, col4 = st.columns([3, 1, 1, 1])
-                with col1:
-                    st.write(mat_row[1])
-                with col2:
-                    if st.button(f"✏️ Edit", key=f"edit_material_{mat_row[0]}"):
-                        st.session_state['edit_item'] = {
-                            'type': 'material',
-                            'id': mat_row[0],
-                            'name': mat_row[1],
-                            'model_id': model_id,
-                            'model_name': model_name,     # Model (collection field)
-                            'collection': collection,     # Submodel (model_name field)
-                            'brand': selected_brand
-                        }
-                        st.session_state['show_edit_modal'] = True
-                with col3:
-                    if st.button(f"🗑️ Delete", key=f"delete_material_{mat_row[0]}"):
-                        st.session_state['confirm_delete'] = {
-                            'type': 'material',
-                            'id': mat_row[0],
-                            'name': mat_row[1],
-                            'model_id': model_id
-                        }
-                        st.session_state['show_delete_modal'] = True
-        else:
-            st.info("No materials found for this model.")
-    
-    # Edit modal
-    if st.session_state.get('show_edit_modal', False):
-        edit_info = st.session_state.get('edit_item', {})
-        if edit_info:
-            @st.dialog("Edit Item")
-            def edit_item_modal():
-                st.info(f"✏️ Edit {edit_info['type'].capitalize()}: **{edit_info['name']}**")
-                
-                new_value = st.text_input(f"New {edit_info['type']} value:", value=edit_info['name'], key="edit_value_input")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    if st.button("📝 Submit Edit Request", type="primary", use_container_width=True, key="modal_submit_edit"):
-                        if new_value.strip() and new_value.strip() != edit_info['name']:
-                            # Create request for editing
-                            field_name = 'sizes' if edit_info['type'] == 'size' else 'materials'
-                            request_data = {
-                                'requested_by': st.session_state.username,
-                                'brand': edit_info['brand'],
-                                'model': edit_info['model_name'],      # Model field
-                                'submodel': edit_info['collection'],   # Submodel field
-                                field_name: new_value.strip(),
-                                'sizes' if field_name == 'materials' else 'materials': '',
-                                'notes': f"EDIT {edit_info['type'].upper()} REQUEST: Change '{edit_info['name']}' to '{new_value.strip()}' for {edit_info['model_name']} - {edit_info['collection']} (ID: {edit_info['id']})"
-                            }
-                            if save_model_request(request_data):
-                                st.success(f"✅ Edit request submitted for {edit_info['type']}: {edit_info['name']} → {new_value}")
-                            else:
-                                st.error("❌ Failed to submit edit request")
-                        else:
-                            st.error("❌ Please enter a different value")
-                        
-                        # Clear session state and refresh
-                        st.session_state['show_edit_modal'] = False
-                        st.session_state['edit_item'] = None
-                        st.rerun()
-                
-                with col2:
-                    if st.button("❌ Cancel", use_container_width=True, key="modal_cancel_edit"):
-                        st.session_state['show_edit_modal'] = False
-                        st.session_state['edit_item'] = None
-                        st.rerun()
+        if submitted:
+            if not selected_brand:
+                st.error("❌ Please select a brand")
+                return
             
-            edit_item_modal()
-    
-    # Delete modal (existing functionality)
-    if st.session_state.get('show_delete_modal', False):
-        confirm_info = st.session_state.get('confirm_delete', {})
-        if confirm_info:
-            @st.dialog("Delete Confirmation")
-            def delete_confirmation_modal():
-                st.error(f"⚠️ Are you sure you want to delete **{confirm_info['type'].capitalize()}**: **{confirm_info['name']}**?")
-                st.warning("This action cannot be undone!")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    if st.button("🗑️ Yes, Delete", type="primary", use_container_width=True, key="modal_confirm_delete"):
-                        engine = get_main_db_engine()
-                        if engine:
-                            try:
-                                with engine.begin() as conn:  # Use begin() for auto-commit
-                                    if confirm_info['type'] == 'size':
-                                        result = conn.execute(text("DELETE FROM model_sizes WHERE id = :id"), {"id": confirm_info['id']})
-                                        if result.rowcount > 0:
-                                            st.success(f"✅ Deleted size: {confirm_info['name']}")
-                                        else:
-                                            st.error(f"❌ Size not found or already deleted")
-                                    elif confirm_info['type'] == 'material':
-                                        result = conn.execute(text("DELETE FROM model_materials WHERE id = :id"), {"id": confirm_info['id']})
-                                        if result.rowcount > 0:
-                                            st.success(f"✅ Deleted material: {confirm_info['name']}")
-                                        else:
-                                            st.error(f"❌ Material not found or already deleted")
-                            except Exception as e:
-                                st.error(f"❌ Error deleting: {str(e)}")
-                        
-                        # Clear session state and refresh
-                        st.session_state['show_delete_modal'] = False
-                        st.session_state['confirm_delete'] = None
-                        st.rerun()
-                
-                with col2:
-                    if st.button("❌ Cancel", use_container_width=True, key="modal_cancel_delete"):
-                        st.session_state['show_delete_modal'] = False
-                        st.session_state['confirm_delete'] = None
-                        st.rerun()
+            if not model_name.strip() and not submodel_name.strip() and not size_input.strip() and not material_input.strip():
+                st.error("❌ Please specify at least one edit (model, submodel, size, or material)")
+                return
             
-            delete_confirmation_modal()
+            # Validate format
+            edits = []
+            if model_name.strip() and "→" not in model_name:
+                st.error("❌ Model edit must use format: 'Old Value → New Value'")
+                return
+            if submodel_name.strip() and "→" not in submodel_name:
+                st.error("❌ Submodel edit must use format: 'Old Value → New Value'")
+                return
+            if size_input.strip() and "→" not in size_input:
+                st.error("❌ Size edit must use format: 'Old Value → New Value'")
+                return
+            if material_input.strip() and "→" not in material_input:
+                st.error("❌ Material edit must use format: 'Old Value → New Value'")
+                return
+                
+            request_data = {
+                'requested_by': st.session_state.username,
+                'brand': selected_brand,
+                'category': 'edit',
+                'model': model_name.strip() or 'No Change',
+                'submodel': submodel_name.strip() or 'No Change',
+                'sizes': size_input.strip() or None,
+                'materials': material_input.strip() or None,
+                'notes': notes.strip() or None
+            }
+            
+            if save_model_request(request_data):
+                st.success("✅ Edit request submitted successfully!")
+                st.rerun()
+
+def create_delete_request_form(selected_brand):
+    """Create form for deleting existing items"""
+    st.markdown("#### 🗑️ Delete Existing Item")
+    
+    with st.form("delete_request_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            model_name = st.text_input("Model to Delete *", placeholder="e.g., Vintage, Chevron")
+            size_input = st.text_input("Sizes to Delete", placeholder="e.g., 7,8,9,10 (separate with commas)")
+        with col2:
+            submodel_name = st.text_input("Submodel to Delete *", placeholder="e.g., Kelly, Diana")
+            material_input = st.text_input("Materials to Delete", placeholder="e.g., Canvas, Leather (separate with commas)")
+        
+        st.warning("⚠️ **Deletion Warning**: This request will be reviewed by admin before any data is removed.")
+        notes = st.text_area("Reason for Deletion *", placeholder="Why should this be deleted? (Required)")
+        submitted = st.form_submit_button("📤 Submit Delete Request", type="primary")
+        
+        if submitted:
+            if not selected_brand:
+                st.error("❌ Please select a brand")
+                return
+            
+            if not model_name.strip() or not submodel_name.strip():
+                st.error("❌ Please enter model and submodel names to delete")
+                return
+                
+            if not notes.strip():
+                st.error("❌ Please provide a reason for deletion")
+                return
+                
+            request_data = {
+                'requested_by': st.session_state.username,
+                'brand': selected_brand,
+                'category': 'delete',
+                'model': model_name.strip(),
+                'submodel': submodel_name.strip(),
+                'sizes': size_input.strip() or None,
+                'materials': material_input.strip() or None,
+                'notes': notes.strip()
+            }
+            
+            if save_model_request(request_data):
+                st.success("✅ Delete request submitted successfully!")
+                st.rerun()
+
+def show_user_requests():
+    """Show all requests with filtering options including by editor name"""
+    st.subheader("📋 All Requests")
+    
+    # Get all requests from database
+    all_requests = []
+    try:
+        engine = get_request_db_engine()
+        if engine:
+            Session = sessionmaker(bind=engine)
+            session = Session()
+            # Get ALL requests, not just current user's
+            all_requests = session.query(ModelRequest).order_by(ModelRequest.submitted_at.desc()).all()
+            session.close()
+    except Exception as e:
+        st.error(f"❌ Failed to load requests: {e}")
+        return
+
+    if all_requests:
+        # Get unique requesters for the filter
+        unique_requesters = sorted(list(set([r.requested_by for r in all_requests])))
+        
+        # Filters - editor filter first, then the rest
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            editor_filter = st.selectbox("Filter by Editor:", ["All"] + unique_requesters)
+        with col2:
+            category_filter = st.selectbox("Filter by Category:", ["All", "Add", "Edit", "Delete"])
+        with col3:
+            status_filter = st.selectbox("Filter by Status:", ["All", "Pending", "Approved", "Rejected"])
+        with col4:
+            edit_status_filter = st.selectbox("Filter by Execution:", ["All", "Pending", "Done"])
+        
+        # Apply filters
+        filtered_requests = all_requests
+        if category_filter != "All":
+            filtered_requests = [r for r in filtered_requests if (r.category or 'add') == category_filter.lower()]
+        if status_filter != "All":
+            filtered_requests = [r for r in filtered_requests if r.status == status_filter.lower()]
+        if edit_status_filter != "All":
+            filtered_requests = [r for r in filtered_requests if (r.edit_status or 'pending') == edit_status_filter.lower()]
+        if editor_filter != "All":
+            filtered_requests = [r for r in filtered_requests if r.requested_by == editor_filter]
+        
+        if filtered_requests:
+            # Create table data
+            table_data = []
+            for request in filtered_requests:
+                category = request.category or 'add'
+                category_icon = {"add": "➕", "edit": "✏️", "delete": "🗑️"}[category]
+                status_icon = "✅" if request.status == "approved" else ("❌" if request.status == "rejected" else "⏳")
+                # Get the actual edit status and handle case sensitivity
+                actual_edit_status = (request.edit_status or 'pending').lower().strip()
+                edit_status_icon = "✅" if actual_edit_status == "done" else "⏳"
+                
+                table_data.append({
+                    'ID': request.id,
+                    'Category': f"{category_icon} {category.title()}",
+                    'Requested By': request.requested_by,
+                    'Brand': request.brand,
+                    'Model': request.model,
+                    'Submodel': request.submodel,
+                    'Status': f"{status_icon} {request.status.title()}",
+                    'Execution': f"{edit_status_icon} {actual_edit_status.title()}" if request.status == "approved" else "N/A",
+                    'Submitted': request.submitted_at.strftime('%Y-%m-%d %H:%M')
+                })
+
+            # Display table
+            df = pd.DataFrame(table_data)
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("📭 No requests match the selected filters.")
+    else:
+        st.info("📭 No requests found.")
 
 def show_model_size_material_table():
     """Show table of all models with sizes and materials, filterable by brand"""
@@ -775,40 +868,382 @@ def show_model_size_material_table():
         df = pd.DataFrame(table_data)
         st.dataframe(df, use_container_width=True)
 
-def create_admin_panel():
-    """Create admin panel for approving/rejecting requests"""
-    st.subheader("👑 Admin: Model Request Management")
+def create_supervisor_panel():
+    """Create supervisor panel for approving/rejecting requests"""
+    st.subheader("👑 Supervisor: Request Approval")
     
-    # Check if user is admin
-    if st.session_state.username != "admin":
-        st.error("🚫 Access Denied: Admin privileges required!")
+    # Check if user has supervisor role
+    if st.session_state.user_role not in ["supervisor", "superuser"]:
+        st.error("🚫 Access Denied: Supervisor privileges required!")
         return
     
-    # Tabs for pending and processed requests
-    pending_tab, processed_tab = st.tabs(["📋 Pending Requests", "📊 Processed Requests"])
+    # Tabs for different categories and status
+    add_tab, edit_tab, delete_tab, processed_tab = st.tabs(["➕ Add Requests", "✏️ Edit Requests", "�️ Delete Requests", "�📊 Processed"])
     
-    with pending_tab:
-        st.subheader("📋 Pending Requests")
+    with add_tab:
+        show_pending_requests_by_category("add")
+    
+    with edit_tab:
+        show_pending_requests_by_category("edit")
+    
+    with delete_tab:
+        show_pending_requests_by_category("delete")
+    
+    with processed_tab:
+        show_processed_requests()
+
+def show_pending_requests_by_category(category):
+    """Show pending requests for a specific category"""
+    st.subheader(f"📋 Pending {category.title()} Requests")
+    
+    try:
+        engine = get_request_db_engine()
+        if not engine:
+            return
         
-        pending_requests = load_pending_requests()
+        Session = sessionmaker(bind=engine)
+        session = Session()
         
-        if pending_requests:
-            for request in pending_requests:
-                with st.expander(f"Request #{request.id}: {request.brand} - {request.model} - {request.submodel}", expanded=False):
+        requests = session.query(ModelRequest).filter(
+            ModelRequest.status == 'pending',
+            ModelRequest.category == category
+        ).order_by(ModelRequest.submitted_at.desc()).all()
+        
+        session.close()
+        
+        if requests:
+            for request in requests:
+                # Format description based on category
+                if category == "add":
+                    if request.target_type == "model_and_submodel":
+                        title = f"Add Model: {request.brand} - {request.model} - {request.submodel}"
+                    else:
+                        title = f"Add {request.target_type.title()}: {request.brand} - {request.model} - {request.submodel}"
+                elif category == "edit":
+                    title = f"Edit {request.target_type.title()}: {request.brand} - {request.old_value} → {request.new_value}"
+                else:  # delete
+                    title = f"Delete {request.target_type.title()}: {request.brand} - {request.old_value}"
+                
+                with st.expander(f"Request #{request.id}: {title}", expanded=False):
                     col1, col2 = st.columns([3, 1])
                     
                     with col1:
                         st.write(f"**👤 Requested by:** {request.requested_by}")
                         st.write(f"**🏷️ Brand:** {request.brand}")
-                        st.write(f"**📦 Model:** {request.model}")
-                        st.write(f"**🔸 Submodel:** {request.submodel}")
-                        st.write(f"**📏 Sizes:** {request.sizes}")
-                        if request.materials:
-                            st.write(f"**🧵 Materials:** {request.materials}")
+                        st.write(f"**� Category:** {category.title()}")
+                        
+                        if category == "add":
+                            if request.target_type == "model_and_submodel":
+                                st.write(f"**�📦 Model:** {request.model}")
+                                st.write(f"**🔸 Submodel:** {request.submodel}")
+                                if request.sizes:
+                                    st.write(f"**📏 Sizes:** {request.sizes}")
+                                if request.materials:
+                                    st.write(f"**🧵 Materials:** {request.materials}")
+                            else:
+                                st.write(f"**📦 Model:** {request.model}")
+                                st.write(f"**🔸 Submodel:** {request.submodel}")
+                                st.write(f"**🎯 Adding:** {request.target_type.title()}")
+                                if request.sizes:
+                                    st.write(f"**📏 New Size:** {request.sizes}")
+                                if request.materials:
+                                    st.write(f"**🧵 New Material:** {request.materials}")
+                        elif category == "edit":
+                            st.write(f"**🎯 Editing:** {request.target_type.title()}")
+                            st.write(f"**📝 From:** {request.old_value}")
+                            st.write(f"**📝 To:** {request.new_value}")
+                        else:  # delete
+                            st.write(f"**🎯 Deleting:** {request.target_type.title()}")
+                            st.write(f"**📝 Item:** {request.old_value}")
+                        
                         if request.notes:
                             st.write(f"**📝 Notes:** {request.notes}")
                         st.write(f"**📅 Submitted:** {request.submitted_at.strftime('%Y-%m-%d %H:%M:%S')}")
                     
+                    with col2:
+                        st.write("**Actions:**")
+                        
+                        # Admin notes for approval/rejection
+                        admin_notes = st.text_area(
+                            "Supervisor Notes:",
+                            key=f"admin_notes_{request.id}",
+                            placeholder="Enter notes (required for rejection)...",
+                            height=100
+                        )
+                        
+                        col_approve, col_reject = st.columns(2)
+                        
+                        with col_approve:
+                            if st.button("✅ Approve", key=f"approve_{request.id}", type="primary"):
+                                if update_request_status(request.id, 'approved', st.session_state.username, admin_notes):
+                                    st.success("✅ Request approved! Waiting for superuser execution.")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Failed to approve request")
+                        
+                        with col_reject:
+                            if st.button("❌ Reject", key=f"reject_{request.id}", type="secondary"):
+                                if not admin_notes.strip():
+                                    st.error("❌ Please provide a reason for rejection")
+                                else:
+                                    if update_request_status(request.id, 'rejected', st.session_state.username, admin_notes):
+                                        st.success("❌ Request rejected")
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ Failed to reject request")
+        else:
+            st.info(f"📭 No pending {category} requests at the moment.")
+    
+    except Exception as e:
+        st.error(f"❌ Failed to load requests: {e}")
+
+def show_processed_requests():
+    """Show processed requests with filters"""
+    processed_requests = load_processed_requests()
+    
+    if processed_requests:
+        # Filters
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            category_filter = st.selectbox("Filter by Category:", ["All", "Add", "Edit", "Delete"], key="proc_category")
+        with col2:
+            status_filter = st.selectbox("Filter by Status:", ["All", "Approved", "Rejected"], key="proc_status")
+        with col3:
+            edit_status_filter = st.selectbox("Filter by Execution:", ["All", "Pending", "Done"], key="proc_edit")
+        
+        # Apply filters
+        filtered_requests = processed_requests
+        if category_filter != "All":
+            filtered_requests = [r for r in filtered_requests if r.category == category_filter.lower()]
+        if status_filter != "All":
+            filtered_requests = [r for r in filtered_requests if r.status == status_filter.lower()]
+        if edit_status_filter != "All":
+            filtered_requests = [r for r in filtered_requests if r.edit_status == edit_status_filter.lower()]
+        
+        if filtered_requests:
+            # Create table data
+            table_data = []
+            for request in filtered_requests:
+                category = request.category or 'add'
+                category_icon = {"add": "➕", "edit": "✏️", "delete": "🗑️"}[category]
+                status_icon = "✅" if request.status == "approved" else "❌"
+                edit_status_icon = "✅" if (request.edit_status or 'pending').lower() == "done" else "⏳"
+                
+                table_data.append({
+                    'ID': request.id,
+                    'Category': f"{category_icon} {category.title()}",
+                    'Status': f"{status_icon} {request.status.title()}",
+                    'Execution': f"{edit_status_icon} {(request.edit_status or 'pending').title()}" if request.status == "approved" else "N/A",
+                    'Requested By': request.requested_by,
+                    'Brand': request.brand,
+                    'Description': get_request_description(request),
+                    'Submitted': request.submitted_at.strftime('%Y-%m-%d %H:%M'),
+                    'Processed By': request.processed_by,
+                    'Processed At': request.processed_at.strftime('%Y-%m-%d %H:%M') if request.processed_at else 'N/A',
+                    'Executed By': request.executed_by or 'N/A',
+                    'Executed At': request.executed_at.strftime('%Y-%m-%d %H:%M') if request.executed_at else 'N/A',
+                    'Notes': request.admin_notes or 'N/A'
+                })
+            
+            # Display table
+            df = pd.DataFrame(table_data)
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("📭 No requests match the selected filters.")
+    else:
+        st.info("📭 No processed requests yet.")
+
+def create_superuser_panel():
+    """Create superuser panel for executing approved requests"""
+    st.subheader("🔧 Superuser: Execute Approved Requests")
+    
+    # Check if user has superuser role
+    if st.session_state.user_role != "superuser":
+        st.error("🚫 Access Denied: Superuser privileges required!")
+        return
+    
+    # Tabs for different categories
+    execute_tab, completed_tab = st.tabs(["⏳ Pending Execution", "✅ Completed"])
+    
+    with execute_tab:
+        show_approved_pending_requests()
+    
+    with completed_tab:
+        show_executed_requests()
+
+def show_approved_pending_requests():
+    """Show approved requests pending execution"""
+    st.subheader("⏳ Approved Requests Awaiting Execution")
+    
+    approved_requests = load_approved_pending_requests()
+    
+    if approved_requests:
+        # Category filter
+        category_filter = st.selectbox("Filter by Category:", ["All", "Add", "Edit", "Delete"], key="exec_category")
+        
+        # Apply filter
+        filtered_requests = approved_requests
+        if category_filter != "All":
+            filtered_requests = [r for r in approved_requests if r.category == category_filter.lower()]
+        
+        if filtered_requests:
+            for request in filtered_requests:
+                # Format title based on category
+                if request.category == "add":
+                    if request.target_type == "model_and_submodel":
+                        title = f"Add Model: {request.brand} - {request.model} - {request.submodel}"
+                    else:
+                        title = f"Add {request.target_type.title()}: {request.brand} - {request.model} - {request.submodel}"
+                elif request.category == "edit":
+                    title = f"Edit {request.target_type.title()}: {request.brand} - {request.old_value} → {request.new_value}"
+                else:  # delete
+                    title = f"Delete {request.target_type.title()}: {request.brand} - {request.old_value}"
+                
+                with st.expander(f"Request #{request.id}: {title}", expanded=False):
+                    col1, col2 = st.columns([3, 1])
+                    
+                    with col1:
+                        st.write(f"**👤 Requested by:** {request.requested_by}")
+                        st.write(f"**👑 Approved by:** {request.processed_by}")
+                        st.write(f"**📅 Approved at:** {request.processed_at.strftime('%Y-%m-%d %H:%M:%S')}")
+                        st.write(f"**🏷️ Brand:** {request.brand}")
+                        st.write(f"**📂 Category:** {request.category.title()}")
+                        
+                        # Show details based on category
+                        if request.category == "add":
+                            if request.target_type == "model_and_submodel":
+                                st.write(f"**📦 Model:** {request.model}")
+                                st.write(f"**🔸 Submodel:** {request.submodel}")
+                                if request.sizes:
+                                    st.write(f"**📏 Sizes:** {request.sizes}")
+                                if request.materials:
+                                    st.write(f"**🧵 Materials:** {request.materials}")
+                            else:
+                                st.write(f"**📦 Model:** {request.model}")
+                                st.write(f"**🔸 Submodel:** {request.submodel}")
+                                st.write(f"**🎯 Adding:** {request.target_type.title()}")
+                                if request.sizes:
+                                    st.write(f"**📏 New Size:** {request.sizes}")
+                                if request.materials:
+                                    st.write(f"**🧵 New Material:** {request.materials}")
+                        elif request.category == "edit":
+                            st.write(f"**🎯 Editing:** {request.target_type.title()}")
+                            st.write(f"**📝 From:** {request.old_value}")
+                            st.write(f"**📝 To:** {request.new_value}")
+                        else:  # delete
+                            st.write(f"**🎯 Deleting:** {request.target_type.title()}")
+                            st.write(f"**📝 Item:** {request.old_value}")
+                        
+                        if request.notes:
+                            st.write(f"**📝 Original Notes:** {request.notes}")
+                        if request.admin_notes:
+                            st.write(f"**📝 Supervisor Notes:** {request.admin_notes}")
+                    
+                    with col2:
+                        st.write("**Execute:**")
+                        
+                        if st.button("🔧 Execute in Database", key=f"execute_{request.id}", type="primary"):
+                            if execute_approved_request(request):
+                                if update_edit_status(request.id, 'done', st.session_state.username):
+                                    st.success("✅ Request executed successfully in database!")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Request executed but failed to update status")
+                            else:
+                                st.error("❌ Failed to execute request in database")
+        else:
+            st.info(f"📭 No approved {category_filter.lower() if category_filter != 'All' else ''} requests awaiting execution.")
+    else:
+        st.info("📭 No approved requests awaiting execution.")
+
+def show_executed_requests():
+    """Show executed requests"""
+    st.subheader("✅ Executed Requests")
+    
+    try:
+        engine = get_request_db_engine()
+        if not engine:
+            return
+        
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        requests = session.query(ModelRequest).filter(
+            ModelRequest.status == 'approved',
+            ModelRequest.edit_status == 'done'
+        ).order_by(ModelRequest.executed_at.desc()).all()
+        
+        session.close()
+        
+        if requests:
+            # Create table data
+            table_data = []
+            for request in requests:
+                category = request.category or 'add'
+                category_icon = {"add": "➕", "edit": "✏️", "delete": "🗑️"}[category]
+                
+                table_data.append({
+                    'ID': request.id,
+                    'Category': f"{category_icon} {category.title()}",
+                    'Brand': request.brand,
+                    'Description': get_request_description(request),
+                    'Requested By': request.requested_by,
+                    'Approved By': request.processed_by,
+                    'Executed By': request.executed_by,
+                    'Executed At': request.executed_at.strftime('%Y-%m-%d %H:%M')
+                })
+            
+            # Display table
+            df = pd.DataFrame(table_data)
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("📭 No executed requests yet.")
+    
+    except Exception as e:
+        st.error(f"❌ Failed to load executed requests: {e}")
+
+def get_request_description(request):
+    """Get a formatted description of the request"""
+    category = request.category or 'add'
+    if category == "add":
+        return f"{request.model} - {request.submodel}"
+    elif category == "edit":
+        return f"{request.model} → {request.submodel}"
+    else:  # delete
+        return f"{request.model} - {request.submodel}"
+
+def create_admin_panel():
+    """Create unified admin panel for approving and executing requests"""
+    st.subheader("👑 Admin Panel")
+    
+    # Create tabs for different admin functions
+    tab1, tab2, tab3 = st.tabs(["🔍 Pending Requests", "✅ Approved Requests", "📋 All Requests"])
+    
+    with tab1:
+        st.markdown("#### 🔍 Pending Requests (Awaiting Approval)")
+        pending_requests = load_pending_requests()
+        
+        if pending_requests:
+            for request in pending_requests:
+                category_display = (request.category or 'add').upper()
+                with st.expander(f"🔍 {category_display} Request #{request.id}: {request.brand} - {request.model} - {request.submodel}", expanded=False):
+                    col1, col2 = st.columns([2, 1])
+                    
+                    with col1:
+                        st.write(f"👤 **Requested by:** {request.requested_by}")
+                        st.write(f"🏷️ **Brand:** {request.brand}")
+                        st.write(f"� **Model:** {request.model}")
+                        st.write(f"� **Submodel:** {request.submodel}")
+                        
+                        if request.sizes:
+                            st.write(f"� **Sizes:** {request.sizes}")
+                        if request.materials:
+                            st.write(f"🧵 **Materials:** {request.materials}")
+                        if request.notes:
+                            st.write(f"� **Notes:** {request.notes}")
+                            
+                        st.write(f"📅 **Submitted:** {request.submitted_at.strftime('%Y-%m-%d %H:%M:%S')}")
+                        
                     with col2:
                         st.write("**Actions:**")
                         
@@ -824,7 +1259,9 @@ def create_admin_panel():
                         
                         with col_approve:
                             if st.button("✅ Approve", key=f"approve_{request.id}", type="primary"):
-                                if update_request_status(request.id, 'approved', 'admin', admin_notes):
+                                # For approval, admin notes can be empty
+                                notes_to_save = admin_notes.strip() if admin_notes.strip() else None
+                                if update_request_status(request.id, 'approved', st.session_state.username, notes_to_save):
                                     st.success("✅ Request approved!")
                                     st.rerun()
                                 else:
@@ -835,55 +1272,919 @@ def create_admin_panel():
                                 if not admin_notes.strip():
                                     st.error("❌ Please provide a reason for rejection")
                                 else:
-                                    if update_request_status(request.id, 'rejected', 'admin', admin_notes):
+                                    if update_request_status(request.id, 'rejected', st.session_state.username, admin_notes.strip()):
                                         st.success("❌ Request rejected")
                                         st.rerun()
                                     else:
                                         st.error("❌ Failed to reject request")
+
         else:
-            st.info("📭 No pending requests at the moment.")
+            st.info("No pending requests")
     
-    with processed_tab:
-        st.subheader("📊 Processed Requests")
+    with tab2:
+        st.markdown("#### ✅ Approved Requests (Ready for Manual Work)")
+        approved_requests = load_approved_pending_requests()
         
-        processed_requests = load_processed_requests()
-        
-        if processed_requests:
-            # Filter options
-            status_filter = st.selectbox("Filter by status:", ["All", "Approved", "Rejected"], key="processed_filter")
+        if approved_requests:
+            # Add filters for approved requests
+            col1, col2 = st.columns(2)
+            with col1:
+                category_filter = st.selectbox("Filter by Category:", ["All", "Add", "Edit", "Delete"], key="approved_category_filter")
+            with col2:
+                # Get unique approval dates
+                approval_dates = list(set([req.processed_at.date() for req in approved_requests if req.processed_at]))
+                approval_dates.sort(reverse=True)  # Most recent first
+                date_options = ["All"] + [date.strftime('%Y-%m-%d') for date in approval_dates]
+                date_filter = st.selectbox("Filter by Approval Date:", date_options, key="approved_date_filter")
             
-            # Filter processed requests
-            filtered_requests = processed_requests
-            if status_filter != "All":
-                filtered_requests = [req for req in processed_requests if req.status.title() == status_filter]
+            # Apply filters
+            filtered_requests = approved_requests
+            if category_filter != "All":
+                filtered_requests = [r for r in filtered_requests if (r.category or 'add') == category_filter.lower()]
+            if date_filter != "All":
+                selected_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+                filtered_requests = [r for r in filtered_requests if r.processed_at and r.processed_at.date() == selected_date]
             
             if filtered_requests:
-                # Create table data for processed requests
+                for request in filtered_requests:
+                    category_display = (request.category or 'add').upper()
+                    exec_status = request.edit_status or 'pending'
+                    
+                    # Status indicators
+                    if exec_status == 'done':
+                        status_indicator = "✅ COMPLETED"
+                    else:
+                        status_indicator = "⏳ NEEDS MANUAL WORK"
+                    
+                    with st.expander(f"{status_indicator} - {category_display} Request #{request.id}: {request.brand} - {request.model} - {request.submodel}", expanded=False):
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.write(f"👤 **Requested by:** {request.requested_by}")
+                            st.write(f"👑 **Approved by:** {request.processed_by}")
+                            st.write(f"📅 **Approved:** {request.processed_at.strftime('%Y-%m-%d %H:%M')}")
+                            st.write(f"🏷️ **Brand:** {request.brand}")
+                            st.write(f"📦 **Model:** {request.model}")
+                            st.write(f"🔸 **Submodel:** {request.submodel}")
+                            
+                            if request.sizes:
+                                st.write(f"� **Sizes:** {request.sizes}")
+                            if request.materials:
+                                st.write(f"🧵 **Materials:** {request.materials}")
+                            if request.notes:
+                                st.write(f"📝 **Notes:** {request.notes}")
+                            if request.admin_notes:
+                                st.write(f"💬 **Admin Notes:** {request.admin_notes}")
+                        
+                        with col2:
+                            # Show current execution status
+                            exec_status = request.edit_status or 'pending'
+                            if exec_status == 'done':
+                                st.success("✅ Completed")
+                            else:
+                                if st.button(f"✅ Mark as Done #{request.id}", key=f"mark_done_{request.id}", type="primary"):
+                                    if update_edit_status(request.id, 'done', st.session_state.username):
+                                        st.success(f"✅ Request #{request.id} marked as DONE!")
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ Failed to update status")
+            else:
+                st.info("📭 No approved requests match the selected filters")
+        else:
+            st.info("No approved requests pending manual work")
+    
+    with tab3:
+        st.markdown("#### 📋 All Requests")
+        
+        # Get all requests from database
+        all_requests = []
+        try:
+            engine = get_request_db_engine()
+            if engine:
+                Session = sessionmaker(bind=engine)
+                session = Session()
+                # Get ALL requests, not just processed ones
+                all_requests = session.query(ModelRequest).order_by(ModelRequest.submitted_at.desc()).all()
+                session.close()
+        except Exception as e:
+            st.error(f"❌ Failed to load requests: {e}")
+            return
+
+        if all_requests:
+            # Add filters
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                status_filter = st.selectbox("Filter by Status:", ["All", "Pending", "Approved", "Rejected"], key="all_status_filter")
+            
+            with col2:
+                execution_filter = st.selectbox("Filter by Execution:", ["All", "Pending", "Done"], key="all_execution_filter")
+            
+            with col3:
+                category_filter = st.selectbox("Filter by Category:", ["All", "Add", "Edit", "Delete"], key="all_category_filter")
+            
+            with col4:
+                # Get unique submission dates
+                submission_dates = list(set([req.submitted_at.date() for req in all_requests if req.submitted_at]))
+                submission_dates.sort(reverse=True)  # Most recent first
+                date_options = ["All"] + [date.strftime('%Y-%m-%d') for date in submission_dates]
+                date_filter = st.selectbox("Filter by Date:", date_options, key="all_date_filter")
+            
+            # Apply filters
+            filtered_requests = all_requests
+            
+            if status_filter != "All":
+                filtered_requests = [r for r in filtered_requests if r.status == status_filter.lower()]
+            
+            if execution_filter != "All":
+                filtered_requests = [r for r in filtered_requests if (r.edit_status or 'pending').lower() == execution_filter.lower()]
+            
+            if category_filter != "All":
+                filtered_requests = [r for r in filtered_requests if (r.category or 'add') == category_filter.lower()]
+            
+            if date_filter != "All":
+                selected_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+                filtered_requests = [r for r in filtered_requests if r.submitted_at and r.submitted_at.date() == selected_date]
+
+            if filtered_requests:
+                # Create table data
                 table_data = []
                 for request in filtered_requests:
-                    status_icon = "✅" if request.status == "approved" else "❌"
+                    category = request.category or 'add'
+                    category_icon = {"add": "➕", "edit": "✏️", "delete": "🗑️"}[category]
+                    status_icon = "✅" if request.status == "approved" else ("❌" if request.status == "rejected" else "⏳")
+                    
+                    # Get execution status for approved requests
+                    execution_status = ""
+                    if request.status == "approved":
+                        actual_edit_status = (request.edit_status or 'pending').lower().strip()
+                        exec_icon = "✅" if actual_edit_status == "done" else "⏳"
+                        execution_status = f"{exec_icon} {actual_edit_status.title()}"
+                    else:
+                        execution_status = "N/A"
+                    
                     table_data.append({
                         'ID': request.id,
+                        'Category': f"{category_icon} {category.title()}",
                         'Status': f"{status_icon} {request.status.title()}",
+                        'Execution': execution_status,
                         'Requested By': request.requested_by,
                         'Brand': request.brand,
                         'Model': request.model,
                         'Submodel': request.submodel,
-                        'Sizes': request.sizes,
+                        'Sizes': request.sizes or 'N/A',
                         'Materials': request.materials or 'N/A',
                         'Submitted': request.submitted_at.strftime('%Y-%m-%d %H:%M'),
-                        'Processed By': request.processed_by,
-                        'Processed At': request.processed_at.strftime('%Y-%m-%d %H:%M'),
+                        'Processed By': request.processed_by or 'N/A',
+                        'Notes': request.notes or 'N/A',
                         'Admin Notes': request.admin_notes or 'N/A'
                     })
-                
+
                 # Display table
                 df = pd.DataFrame(table_data)
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(df, use_container_width=True, height=600)
             else:
-                st.info(f"📭 No {status_filter.lower()} requests found.")
+                st.info("📭 No requests match the selected filters.")
         else:
-            st.info("📭 No processed requests yet.")
+            st.info("📭 No requests found.")
+
+def create_keyword_manager():
+    """Create keyword manager interface for manual size/material management"""
+    st.subheader("🔧 Keyword Manager")
+    
+    # Get existing brands
+    brands = get_existing_brands()
+    if not brands:
+        st.info("No brands found in main database.")
+        return
+    
+    # Brand selection
+    selected_brand = st.selectbox("Select Brand:", brands, key="km_brand_select")
+    
+    if selected_brand:
+        # Operation tabs
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+            "🆕 Add Model/Submodel", 
+            "➕ Add Size/Material", 
+            "✏️ Edit Size/Material", 
+            "🗑️ Delete Size/Material",
+            "📝 Edit Submodel Name",
+            "❌ Delete Submodel"
+        ])
+        
+        with tab1:
+            show_add_model_interface(selected_brand)
+        
+        with tab2:
+            show_add_interface(selected_brand)
+        
+        with tab3:
+            show_edit_interface(selected_brand)
+        
+        with tab4:
+            show_delete_interface(selected_brand)
+        
+        with tab5:
+            show_edit_submodel_interface(selected_brand)
+        
+        with tab6:
+            show_delete_submodel_interface(selected_brand)
+
+def show_add_model_interface(brand):
+    """Show interface for adding new models and submodels"""
+    
+    with st.form("add_model_submodel_form"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Model Information:**")
+            model_name = st.text_input("Model (Collection) *", placeholder="e.g., Vintage, Chevron, Speedy")
+            submodel_name = st.text_input("Submodel (Model Name) *", placeholder="e.g., Kelly, Diana, 25")
+        
+        with col2:
+            st.markdown("**Optional Initial Data:**")
+            initial_sizes = st.text_input("Initial Sizes", placeholder="e.g., 7,8,9,10 (separate with commas)")
+            initial_materials = st.text_input("Initial Materials", placeholder="e.g., Canvas, Leather (separate with commas)")
+        
+        st.markdown("**Note:** This will create a new model entry in the database for the selected brand.")
+        
+        submitted = st.form_submit_button("🆕 Add Model/Submodel", type="primary")
+        
+        if submitted:
+            if not model_name.strip() or not submodel_name.strip():
+                st.error("❌ Both Model and Submodel names are required")
+                return
+            
+            # Check if this model/submodel combination already exists
+            if check_model_exists(brand, model_name.strip(), submodel_name.strip()):
+                st.error(f"❌ Model '{model_name.strip()}' with Submodel '{submodel_name.strip()}' already exists for {brand}")
+                return
+            
+            # Add the new model/submodel
+            if add_new_model(brand, model_name.strip(), submodel_name.strip(), initial_sizes.strip(), initial_materials.strip()):
+                st.success(f"✅ Successfully added Model '{model_name.strip()}' with Submodel '{submodel_name.strip()}' to {brand}")
+                st.rerun()
+            else:
+                st.error("❌ Failed to add new model/submodel")
+
+def show_add_interface(brand):
+    """Show interface for adding sizes/materials"""
+    st.info("💡 **Note:** To add a completely new model/submodel, use the 'Add Model/Submodel' tab instead.")
+    
+    # Get models for the brand
+    models = get_models_for_brand(brand)
+    if not models:
+        st.warning(f"No models found for {brand}. Please add a model first using the 'Add Model/Submodel' tab.")
+        return
+    
+    # Model selection (separate dropdowns for Model and Submodel)
+    # Get unique collections (models) for the brand
+    unique_collections = sorted(list(set([m[2] for m in models])))
+    selected_collection = st.selectbox("Model (Collection):", [""] + unique_collections, key="add_collection_select")
+    
+    # Submodel dropdown
+    if selected_collection:
+        # Get submodels for the selected collection
+        submodels_for_collection = [m for m in models if m[2] == selected_collection]
+        submodel_options = [m[1] for m in submodels_for_collection]
+        selected_submodel = st.selectbox("Submodel:", [""] + submodel_options, key="add_submodel_select")
+    else:
+        selected_submodel = st.selectbox("Submodel:", [""], key="add_submodel_select_empty")
+    
+    if selected_collection and selected_submodel:
+        # Find the model ID
+        model_id = None
+        for m in models:
+            if m[2] == selected_collection and m[1] == selected_submodel:
+                model_id = m[0]
+                break
+    
+        if model_id:
+            # Selection between Size or Material
+            add_type = st.selectbox("Select what to add:", ["Size", "Material"], key="add_type_select")
+            
+            if add_type == "Size":
+                # Add Size Section
+                st.markdown("##### 📏 Add Size")
+                with st.form("add_size_form"):
+                    new_size = st.text_input("New Size:", placeholder="Enter new size")
+                    submitted_size = st.form_submit_button("➕ Add Size", type="primary")
+                    
+                    if submitted_size and new_size.strip():
+                        if add_size_or_material(model_id, "size", new_size.strip()):
+                            st.success(f"✅ Added size '{new_size.strip()}' to {selected_collection} - {selected_submodel}")
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to add size")
+            
+            else:  # Material
+                # Add Material Section
+                st.markdown("##### 🧵 Add Material")
+                with st.form("add_material_form"):
+                    new_material = st.text_input("New Material:", placeholder="Enter new material")
+                    submitted_material = st.form_submit_button("➕ Add Material", type="primary")
+                    
+                    if submitted_material and new_material.strip():
+                        if add_size_or_material(model_id, "material", new_material.strip()):
+                            st.success(f"✅ Added material '{new_material.strip()}' to {selected_collection} - {selected_submodel}")
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to add material")
+
+def show_edit_interface(brand):
+    """Show interface for editing sizes/materials"""
+    
+    # Get models for the brand
+    models = get_models_for_brand(brand)
+    if not models:
+        st.info(f"No models found for {brand}")
+        return
+    
+    # Model selection (separate dropdowns like in add interface)
+    # Get unique collections (models) for the brand
+    unique_collections = sorted(list(set([m[2] for m in models])))
+    selected_collection = st.selectbox(
+        "Model (Collection):", 
+        [""] + unique_collections, 
+        key="edit_collection_select"
+    )
+    
+    if selected_collection:
+        # Get submodels for the selected collection
+        submodels_for_collection = [m for m in models if m[2] == selected_collection]
+        submodel_options = [m[1] for m in submodels_for_collection]
+        selected_submodel = st.selectbox(
+            "Submodel:", 
+            [""] + submodel_options, 
+            key="edit_submodel_select"
+        )
+    else:
+        selected_submodel = st.selectbox("Submodel:", [""], key="edit_submodel_select_empty")
+    
+    if selected_collection and selected_submodel:
+            # Find the model ID
+            model_id = None
+            for m in models:
+                if m[2] == selected_collection and m[1] == selected_submodel:
+                    model_id = m[0]
+                    break
+        
+            if model_id:
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**📏 Sizes**")
+                    sizes = get_sizes_for_model(model_id)
+                    if sizes:
+                        for size in sizes:
+                            with st.container():
+                                size_col1, size_col2 = st.columns([3, 1])
+                                with size_col1:
+                                    new_size = st.text_input(f"Size:", value=size[1], key=f"edit_size_{size[0]}",label_visibility="collapsed")
+                                with size_col2:
+                                    if st.button("💾", key=f"save_size_{size[0]}", help="Save changes"):
+                                        if update_size(size[0], new_size):
+                                            st.success("✅ Updated!")
+                                            st.rerun()
+                    else:
+                        st.info("No sizes found for this model")
+                
+                with col2:
+                    st.markdown("**🧵 Materials**")
+                    materials = get_materials_for_model(model_id)
+                    if materials:
+                        for material in materials:
+                            with st.container():
+                                mat_col1, mat_col2 = st.columns([3, 1])
+                                with mat_col1:
+                                    new_material = st.text_input(f"Material:", value=material[1], key=f"edit_material_{material[0]}",label_visibility="collapsed")
+                                with mat_col2:
+                                    if st.button("💾", key=f"save_material_{material[0]}", help="Save changes"):
+                                        if update_material(material[0], new_material):
+                                            st.success("✅ Updated!")
+                                            st.rerun()
+                    else:
+                        st.info("No materials found for this model")
+
+def show_delete_interface(brand):
+    """Show interface for deleting sizes/materials similar to the screenshot"""
+    
+    # Get models for the brand
+    models = get_models_for_brand(brand)
+    if not models:
+        st.info(f"No models found for {brand}")
+        return
+    
+    # Create collections and submodels
+    collections = list(set([m[2] for m in models]))
+    collections.sort()
+    
+    # Model (Collection) dropdown
+    collection_options = [""] + collections
+    selected_collection = st.selectbox(
+        "Model (Collection):", 
+        collection_options, 
+        key="delete_collection_select"
+    )
+    
+    # Submodel dropdown
+    if selected_collection:
+        submodels = [m[1] for m in models if m[2] == selected_collection]
+        submodels.sort()
+        submodel_options = [""] + submodels
+        selected_submodel = st.selectbox(
+            "Submodel:", 
+            submodel_options, 
+            key="delete_submodel_select"
+        )
+    else:
+        selected_submodel = st.selectbox("Submodel:", [""], key="delete_submodel_select_empty")
+    
+    if selected_collection and selected_submodel:
+        # Find model ID
+        model_id = None
+        for m in models:
+            if m[2] == selected_collection and m[1] == selected_submodel:
+                model_id = m[0]
+                break
+        
+        if model_id:
+            # Display current sizes and materials with delete buttons
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**Sizes**")
+                sizes = get_sizes_for_model(model_id)
+                if sizes:
+                    for size in sizes:
+                        size_col1, size_col2 = st.columns([4, 1])
+                        with size_col1:
+                            st.write(size[1])  # size value
+                        with size_col2:
+                            if st.button("🗑️ Delete", key=f"delete_size_{size[0]}", type="secondary"):
+                                if delete_size(size[0]):
+                                    st.success(f"✅ Deleted size '{size[1]}'")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Failed to delete size")
+                else:
+                    st.info("No sizes found")
+            
+            with col2:
+                st.markdown("**Materials**") 
+                materials = get_materials_for_model(model_id)
+                if materials:
+                    for material in materials:
+                        mat_col1, mat_col2 = st.columns([4, 1])
+                        with mat_col1:
+                            st.write(material[1])  # material value
+                        with mat_col2:
+                            if st.button("🗑️ Delete", key=f"delete_material_{material[0]}", type="secondary"):
+                                if delete_material(material[0]):
+                                    st.success(f"✅ Deleted material '{material[1]}'")
+                                    st.rerun()
+                                else:
+                                    st.error("❌ Failed to delete material")
+                else:
+                    st.info("No materials found")
+
+def show_edit_submodel_interface(brand):
+    """Show interface for editing submodel names"""
+    st.markdown("#### 📝 Edit Submodel Name")
+    st.info("💡 **Note:** This will change the submodel name in the database.")
+    
+    # Get models for the brand
+    models = get_models_for_brand(brand)
+    if not models:
+        st.info(f"No models found for {brand}")
+        return
+    
+    # Model selection
+    unique_collections = sorted(list(set([m[2] for m in models])))
+    selected_collection = st.selectbox(
+        "Model (Collection):", 
+        [""] + unique_collections, 
+        key="edit_submodel_collection_select"
+    )
+    
+    if selected_collection:
+        # Get submodels for the selected collection
+        submodels_for_collection = [m for m in models if m[2] == selected_collection]
+        submodel_options = [(m[0], m[1]) for m in submodels_for_collection]  # (id, name)
+        
+        if submodel_options:
+            selected_submodel_data = st.selectbox(
+                "Submodel to Edit:", 
+                [("", "")] + submodel_options, 
+                format_func=lambda x: x[1] if x[1] else "Select a submodel...",
+                key="edit_submodel_select"
+            )
+            
+            if selected_submodel_data[0]:  # If a submodel is selected
+                model_id, current_name = selected_submodel_data
+                
+                with st.form("edit_submodel_form"):
+                    st.write(f"**Current Name:** {current_name}")
+                    new_name = st.text_input(
+                        "New Submodel Name:", 
+                        value=current_name,
+                        placeholder="Enter new submodel name"
+                    )
+                    
+                    submitted = st.form_submit_button("📝 Update Submodel Name", type="primary")
+                    
+                    if submitted:
+                        if not new_name.strip():
+                            st.error("❌ Submodel name cannot be empty")
+                        elif new_name.strip() == current_name:
+                            st.warning("⚠️ New name is the same as current name")
+                        else:
+                            if update_submodel_name(model_id, new_name.strip()):
+                                st.success(f"✅ Successfully updated submodel name from '{current_name}' to '{new_name.strip()}'")
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to update submodel name")
+        else:
+            st.info("No submodels found for this model")
+    else:
+        st.info("Please select a model first")
+
+def show_delete_submodel_interface(brand):
+    """Show interface for deleting entire submodels"""
+    st.markdown("#### ❌ Delete Submodel")
+    st.warning("⚠️ **Warning:** This will permanently delete the entire submodel and all its associated sizes and materials!")
+    
+    # Get models for the brand
+    models = get_models_for_brand(brand)
+    if not models:
+        st.info(f"No models found for {brand}")
+        return
+    
+    # Model selection
+    unique_collections = sorted(list(set([m[2] for m in models])))
+    selected_collection = st.selectbox(
+        "Model (Collection):", 
+        [""] + unique_collections, 
+        key="delete_submodel_collection_select"
+    )
+    
+    if selected_collection:
+        # Get submodels for the selected collection
+        submodels_for_collection = [m for m in models if m[2] == selected_collection]
+        submodel_options = [(m[0], m[1], m[2]) for m in submodels_for_collection]  # (id, name, collection)
+        
+        if submodel_options:
+            selected_submodel_data = st.selectbox(
+                "Submodel to Delete:", 
+                [("", "", "")] + submodel_options, 
+                format_func=lambda x: x[1] if x[1] else "Select a submodel to delete...",
+                key="delete_submodel_select"
+            )
+            
+            if selected_submodel_data[0]:  # If a submodel is selected
+                model_id, submodel_name, collection_name = selected_submodel_data
+                
+                # Show details about what will be deleted
+                st.markdown("**Will be deleted:**")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.write(f"**Model:** {collection_name}")
+                    st.write(f"**Submodel:** {submodel_name}")
+                    
+                    # Show sizes that will be deleted
+                    sizes = get_sizes_for_model(model_id)
+                    if sizes:
+                        st.write(f"**Sizes ({len(sizes)}):** {', '.join([s[1] for s in sizes])}")
+                    else:
+                        st.write("**Sizes:** None")
+                
+                with col2:
+                    # Show materials that will be deleted
+                    materials = get_materials_for_model(model_id)
+                    if materials:
+                        st.write(f"**Materials ({len(materials)}):** {', '.join([m[1] for m in materials])}")
+                    else:
+                        st.write("**Materials:** None")
+                
+                # Confirmation section
+                st.markdown("---")
+                st.error("⚠️ **This action cannot be undone!**")
+                
+                confirmation_text = st.text_input(
+                    f"Type '{submodel_name}' to confirm deletion:",
+                    placeholder=f"Type {submodel_name} here..."
+                )
+                
+                if st.button("❌ DELETE SUBMODEL", type="primary", disabled=(confirmation_text != submodel_name)):
+                    if confirmation_text == submodel_name:
+                        if delete_submodel(model_id):
+                            st.success(f"✅ Successfully deleted submodel '{submodel_name}' and all its data")
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to delete submodel")
+                    else:
+                        st.error("❌ Confirmation text doesn't match")
+        else:
+            st.info("No submodels found for this model")
+    else:
+        st.info("Please select a model first")
+
+def get_models_for_brand(brand):
+    """Get all models for a specific brand"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return []
+        
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("""SELECT m.id, m.model_name, m.collection 
+                        FROM models m 
+                        JOIN brands b ON m.brand_id = b.id 
+                        WHERE b.name = :brand_name 
+                        ORDER BY m.collection, m.model_name"""),
+                {"brand_name": brand}
+            )
+            return result.fetchall()
+    except Exception as e:
+        st.error(f"❌ Failed to fetch models: {e}")
+        return []
+
+def get_sizes_for_model(model_id):
+    """Get all sizes for a specific model"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return []
+        
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT id, size FROM model_sizes WHERE model_id = :model_id ORDER BY size"),
+                {"model_id": model_id}
+            )
+            return result.fetchall()
+    except Exception as e:
+        st.error(f"❌ Failed to fetch sizes: {e}")
+        return []
+
+def get_materials_for_model(model_id):
+    """Get all materials for a specific model"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return []
+        
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("SELECT id, material FROM model_materials WHERE model_id = :model_id ORDER BY material"),
+                {"model_id": model_id}
+            )
+            return result.fetchall()
+    except Exception as e:
+        st.error(f"❌ Failed to fetch materials: {e}")
+        return []
+
+def add_size_or_material(model_id, type_name, value):
+    """Add a new size or material to a model"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return False
+        
+        with engine.begin() as conn:
+            if type_name == "size":
+                # Check if size already exists
+                existing = conn.execute(
+                    text("SELECT id FROM model_sizes WHERE model_id = :model_id AND UPPER(size) = UPPER(:size)"),
+                    {"model_id": model_id, "size": value}
+                ).fetchone()
+                
+                if existing:
+                    st.warning(f"Size '{value}' already exists for this model")
+                    return False
+                
+                conn.execute(
+                    text("INSERT INTO model_sizes (model_id, size) VALUES (:model_id, :size)"),
+                    {"model_id": model_id, "size": value}
+                )
+            else:  # material
+                # Check if material already exists
+                existing = conn.execute(
+                    text("SELECT id FROM model_materials WHERE model_id = :model_id AND UPPER(material) = UPPER(:material)"),
+                    {"model_id": model_id, "material": value}
+                ).fetchone()
+                
+                if existing:
+                    st.warning(f"Material '{value}' already exists for this model")
+                    return False
+                
+                conn.execute(
+                    text("INSERT INTO model_materials (model_id, material) VALUES (:model_id, :material)"),
+                    {"model_id": model_id, "material": value}
+                )
+        
+        return True
+    except Exception as e:
+        st.error(f"❌ Failed to add {type_name}: {e}")
+        return False
+
+def check_model_exists(brand, model_name, submodel_name):
+    """Check if a model/submodel combination already exists for a brand"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return False
+        
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("""SELECT m.id FROM models m 
+                        JOIN brands b ON m.brand_id = b.id 
+                        WHERE b.name = :brand_name 
+                        AND UPPER(m.collection) = UPPER(:model_name) 
+                        AND UPPER(m.model_name) = UPPER(:submodel_name)"""),
+                {"brand_name": brand, "model_name": model_name, "submodel_name": submodel_name}
+            ).fetchone()
+            
+            return result is not None
+    except Exception as e:
+        st.error(f"❌ Failed to check if model exists: {e}")
+        return False
+
+def add_new_model(brand, model_name, submodel_name, initial_sizes=None, initial_materials=None):
+    """Add a new model/submodel combination to the database"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return False
+        
+        with engine.begin() as conn:
+            # Get brand ID
+            brand_result = conn.execute(
+                text("SELECT id FROM brands WHERE UPPER(name) = UPPER(:brand_name)"),
+                {"brand_name": brand}
+            ).fetchone()
+            
+            if not brand_result:
+                st.error(f"❌ Brand '{brand}' not found")
+                return False
+            
+            brand_id = brand_result[0]
+            
+            # Insert new model
+            result = conn.execute(
+                text("INSERT INTO models (brand_id, collection, model_name) VALUES (:brand_id, :collection, :model_name) RETURNING id"),
+                {"brand_id": brand_id, "collection": model_name, "model_name": submodel_name}
+            )
+            
+            model_id = result.fetchone()[0]
+            
+            # Add initial sizes if provided
+            if initial_sizes:
+                sizes_list = [size.strip() for size in initial_sizes.split(',')]
+                for size in sizes_list:
+                    if size:
+                        conn.execute(
+                            text("INSERT INTO model_sizes (model_id, size) VALUES (:model_id, :size)"),
+                            {"model_id": model_id, "size": size}
+                        )
+            
+            # Add initial materials if provided
+            if initial_materials:
+                materials_list = [material.strip() for material in initial_materials.split(',')]
+                for material in materials_list:
+                    if material:
+                        conn.execute(
+                            text("INSERT INTO model_materials (model_id, material) VALUES (:model_id, :material)"),
+                            {"model_id": model_id, "material": material}
+                        )
+        
+        return True
+    except Exception as e:
+        st.error(f"❌ Failed to add new model: {e}")
+        return False
+
+def update_size(size_id, new_value):
+    """Update a size"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return False
+        
+        with engine.begin() as conn:
+            conn.execute(
+                text("UPDATE model_sizes SET size = :size WHERE id = :id"),
+                {"size": new_value, "id": size_id}
+            )
+        
+        return True
+    except Exception as e:
+        st.error(f"❌ Failed to update size: {e}")
+        return False
+
+def update_material(material_id, new_value):
+    """Update a material"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return False
+        
+        with engine.begin() as conn:
+            conn.execute(
+                text("UPDATE model_materials SET material = :material WHERE id = :id"),
+                {"material": new_value, "id": material_id}
+            )
+        
+        return True
+    except Exception as e:
+        st.error(f"❌ Failed to update material: {e}")
+        return False
+
+def delete_size(size_id):
+    """Delete a size"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return False
+        
+        with engine.begin() as conn:
+            result = conn.execute(
+                text("DELETE FROM model_sizes WHERE id = :id"),
+                {"id": size_id}
+            )
+            return result.rowcount > 0
+        
+    except Exception as e:
+        st.error(f"❌ Failed to delete size: {e}")
+        return False
+
+def delete_material(material_id):
+    """Delete a material"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return False
+        
+        with engine.begin() as conn:
+            result = conn.execute(
+                text("DELETE FROM model_materials WHERE id = :id"),
+                {"id": material_id}
+            )
+            return result.rowcount > 0
+        
+    except Exception as e:
+        st.error(f"❌ Failed to delete material: {e}")
+        return False
+
+def update_submodel_name(model_id, new_name):
+    """Update a submodel name"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return False
+        
+        with engine.begin() as conn:
+            result = conn.execute(
+                text("UPDATE models SET model_name = :new_name WHERE id = :id"),
+                {"new_name": new_name, "id": model_id}
+            )
+            return result.rowcount > 0
+        
+    except Exception as e:
+        st.error(f"❌ Failed to update submodel name: {e}")
+        return False
+
+def delete_submodel(model_id):
+    """Delete a submodel and all its associated sizes and materials"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return False
+        
+        with engine.begin() as conn:
+            # Delete associated sizes first
+            conn.execute(
+                text("DELETE FROM model_sizes WHERE model_id = :model_id"),
+                {"model_id": model_id}
+            )
+            
+            # Delete associated materials
+            conn.execute(
+                text("DELETE FROM model_materials WHERE model_id = :model_id"),
+                {"model_id": model_id}
+            )
+            
+            # Finally delete the model itself
+            result = conn.execute(
+                text("DELETE FROM models WHERE id = :id"),
+                {"id": model_id}
+            )
+            
+            return result.rowcount > 0
+        
+    except Exception as e:
+        st.error(f"❌ Failed to delete submodel: {e}")
+        return False
 
 def main():
     """Main application"""
@@ -903,18 +2204,32 @@ def main():
     with st.sidebar:
         # User info and logout
         st.subheader(f"👤 {st.session_state.username}")
-        if st.session_state.username == "admin":
-            st.success("👑 Admin")
+        user_role = st.session_state.get('user_role', 'user')
+        role_icons = {"user": "👤", "admin": "👑"}
+        st.success(f"{role_icons.get(user_role, '�')} {user_role.title()}")
+        
         if st.button("🚪 Logout", type="secondary"):
             logout_user()
         st.markdown("---")
-        # Navigation
-        if st.session_state.username == "admin":
-            page = st.radio("Navigation:", ["📝 Submit Request", "📋 Model Size/Material Table", "�️ Manage Sizes/Materials", "👑 Admin Panel"])
-        else:
-            page = st.radio("Navigation:", ["📝 Submit Request", "📋 Model Size/Material Table"])
+        
+        # Navigation based on role
+        if user_role == "admin":
+            page = st.radio("Navigation:", [
+                "📝 Submit Request", 
+                "📋 My Requests",
+                "📊 Model Size/Material Table", 
+                "👑 Admin Panel",
+                "🔧 Keyword Manager"
+            ])
+        else:  # user
+            page = st.radio("Navigation:", [
+                "📝 Submit Request", 
+                "📋 My Requests",
+                "📊 Model Size/Material Table"
+            ])
+        
         st.markdown("---")
-        st.caption("Model Request System v2.0")
+        st.caption("Model Request System v3.0")
         with st.expander("🔍 Database Status", expanded=False):
             req_engine = get_request_db_engine()
             main_engine = get_main_db_engine()
@@ -922,15 +2237,20 @@ def main():
                 st.success("✅ database: Connected")
             else:
                 st.error("❌ database: Failed")
+    
     # Main content
     if page == "📝 Submit Request":
         create_model_request_form()
-    elif page == "📋 Model Size/Material Table":
+    elif page == "📋 My Requests":
+        show_user_requests()
+    elif page == "📊 Model Size/Material Table":
         show_model_size_material_table()
-    elif page == "�️ Manage Sizes/Materials":
-        admin_delete_size_material()
     elif page == "👑 Admin Panel":
         create_admin_panel()
+    elif page == "🔧 Keyword Manager":
+        create_keyword_manager()
+    elif page == "� Superuser Panel":
+        create_superuser_panel()
 
 if __name__ == "__main__":
     main()
