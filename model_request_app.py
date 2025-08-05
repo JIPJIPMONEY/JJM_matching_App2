@@ -9,6 +9,7 @@ import pandas as pd
 from sqlalchemy import create_engine, text, Column, Integer, String, DateTime, Text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime, timezone
+import json
 import os
 
 # Configure page - adjust based on authentication state
@@ -126,6 +127,21 @@ class ModelRequest(Base):
     category = Column(String(20), nullable=True, default='add')  # add, edit, delete
     edit_status = Column(String(20), nullable=True, default='pending')  # pending, done (for approved requests)
 
+class AuditLog(Base):
+    """Model for storing audit logs"""
+    __tablename__ = 'audit_log'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    category = Column(String(100), nullable=False)
+    action = Column(String(50), nullable=False)
+    brand = Column(String(100), nullable=True)
+    model = Column(String(100), nullable=True)
+    submodel = Column(String(100), nullable=True)
+    user_id = Column(String(100), nullable=False)
+    old_value = Column(Text, nullable=True)
+    new_value = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
 def get_request_db_engine():
     """Create engine for request_model database"""
     try:
@@ -157,6 +173,76 @@ def init_request_database():
     except Exception as e:
         st.error(f"❌ Failed to initialize request database: {e}")
         return False
+
+def log_audit_action(category, action, brand=None, model=None, submodel=None, user_id=None, old_value=None, new_value=None):
+    """Log an action to the audit_log table"""
+    try:
+        engine = get_request_db_engine()
+        if not engine:
+            st.error("❌ Cannot connect to request database for audit logging")
+            return False
+        
+        Session = sessionmaker(bind=engine)
+        session = Session()
+        
+        # Convert new_value to JSON string if it's a dict/list
+        new_value_str = None
+        if new_value is not None:
+            if isinstance(new_value, (dict, list)):
+                new_value_str = json.dumps(new_value)
+            else:
+                new_value_str = str(new_value)
+        
+        # Convert old_value to JSON string if it's a dict/list
+        old_value_str = None
+        if old_value is not None:
+            if isinstance(old_value, (dict, list)):
+                old_value_str = json.dumps(old_value)
+            else:
+                old_value_str = str(old_value)
+        
+        audit_entry = AuditLog(
+            category=category,
+            action=action,
+            brand=brand,
+            model=model,
+            submodel=submodel,
+            user_id=user_id or (st.session_state.username if 'username' in st.session_state else 'unknown'),
+            old_value=old_value_str,
+            new_value=new_value_str
+        )
+        
+        session.add(audit_entry)
+        session.commit()
+        session.close()
+        
+        return True
+    except Exception as e:
+        st.error(f"❌ Failed to log audit action: {e}")
+        return False
+
+def get_model_details_by_id(model_id):
+    """Get model details (brand, model, submodel) by model ID"""
+    try:
+        engine = get_main_db_engine()
+        if not engine:
+            return None
+        
+        with engine.connect() as conn:
+            result = conn.execute(
+                text("""SELECT b.name, m.collection, m.model_name 
+                        FROM models m 
+                        JOIN brands b ON m.brand_id = b.id 
+                        WHERE m.id = :model_id"""),
+                {"model_id": model_id}
+            ).fetchone()
+            
+            if result:
+                return (result[0], result[1], result[2])  # brand, model, submodel
+            return None
+    except Exception as e:
+        st.error(f"❌ Failed to get model details: {e}")
+        return None
 
 def get_existing_brands():
     """Fetch existing brands from the main database"""
@@ -1189,6 +1275,48 @@ def show_delete_submodel_interface(brand):
     else:
         st.info("Please select a model first")
 
+def get_complete_model_state(model_id, engine):
+    """Get complete state of a model including all sizes and materials"""
+    try:
+        with engine.connect() as conn:
+            # Get model details
+            model_result = conn.execute(
+                text("""SELECT b.name as brand, m.collection, m.model_name 
+                        FROM models m 
+                        JOIN brands b ON m.brand_id = b.id 
+                        WHERE m.id = :model_id"""),
+                {"model_id": model_id}
+            ).fetchone()
+            
+            if not model_result:
+                return None
+            
+            brand, model_name, submodel_name = model_result
+            
+            # Get all sizes
+            sizes_result = conn.execute(
+                text("SELECT size FROM model_sizes WHERE model_id = :model_id ORDER BY size"),
+                {"model_id": model_id}
+            ).fetchall()
+            sizes = [size[0] for size in sizes_result]
+            
+            # Get all materials
+            materials_result = conn.execute(
+                text("SELECT material FROM model_materials WHERE model_id = :model_id ORDER BY material"),
+                {"model_id": model_id}
+            ).fetchall()
+            materials = [material[0] for material in materials_result]
+            
+            return {
+                "brand": brand,
+                "model": model_name,
+                "submodel": submodel_name,
+                "sizes": sizes,
+                "materials": materials
+            }
+    except Exception as e:
+        return None
+
 def get_models_for_brand(brand):
     """Get all models for a specific brand"""
     try:
@@ -1251,6 +1379,22 @@ def add_size_or_material(model_id, type_name, value):
         if not engine:
             return False
         
+        # Get model details for audit logging
+        model_details = get_model_details_by_id(model_id)
+        if not model_details:
+            st.error("❌ Model not found")
+            return False
+        
+        brand, model_name, submodel_name = model_details
+        
+        # Get current list BEFORE adding
+        if type_name == "size":
+            current_items = get_sizes_for_model(model_id)
+            old_list = [item[1] for item in current_items]  # Get size values
+        else:  # material
+            current_items = get_materials_for_model(model_id)
+            old_list = [item[1] for item in current_items]  # Get material values
+        
         with engine.begin() as conn:
             if type_name == "size":
                 # Check if size already exists
@@ -1282,6 +1426,26 @@ def add_size_or_material(model_id, type_name, value):
                     text("INSERT INTO model_materials (model_id, material) VALUES (:model_id, :material)"),
                     {"model_id": model_id, "material": value}
                 )
+        
+        # Get updated list AFTER adding
+        if type_name == "size":
+            updated_items = get_sizes_for_model(model_id)
+            new_list = [item[1] for item in updated_items]  # Get size values
+        else:  # material
+            updated_items = get_materials_for_model(model_id)
+            new_list = [item[1] for item in updated_items]  # Get material values
+        
+        # Log the audit action with before/after lists
+        log_audit_action(
+            category="size_material",
+            action="add",
+            brand=brand,
+            model=model_name,
+            submodel=submodel_name,
+            user_id=st.session_state.username,
+            old_value={type_name: ",".join(old_list) if old_list else ""},
+            new_value={type_name: ",".join(new_list)}
+        )
         
         return True
     except Exception as e:
@@ -1339,24 +1503,46 @@ def add_new_model(brand, model_name, submodel_name, initial_sizes=None, initial_
             model_id = result.fetchone()[0]
             
             # Add initial sizes if provided
+            sizes_list = []
             if initial_sizes:
-                sizes_list = [size.strip() for size in initial_sizes.split(',')]
+                sizes_list = [size.strip() for size in initial_sizes.split(',') if size.strip()]
                 for size in sizes_list:
-                    if size:
-                        conn.execute(
-                            text("INSERT INTO model_sizes (model_id, size) VALUES (:model_id, :size)"),
-                            {"model_id": model_id, "size": size}
-                        )
+                    conn.execute(
+                        text("INSERT INTO model_sizes (model_id, size) VALUES (:model_id, :size)"),
+                        {"model_id": model_id, "size": size}
+                    )
             
             # Add initial materials if provided
+            materials_list = []
             if initial_materials:
-                materials_list = [material.strip() for material in initial_materials.split(',')]
+                materials_list = [material.strip() for material in initial_materials.split(',') if material.strip()]
                 for material in materials_list:
-                    if material:
-                        conn.execute(
-                            text("INSERT INTO model_materials (model_id, material) VALUES (:model_id, :material)"),
-                            {"model_id": model_id, "material": material}
-                        )
+                    conn.execute(
+                        text("INSERT INTO model_materials (model_id, material) VALUES (:model_id, :material)"),
+                        {"model_id": model_id, "material": material}
+                    )
+        
+        # Create the new model data for audit
+        new_model_data = {
+            "model": model_name,
+            "submodel": submodel_name
+        }
+        if sizes_list:
+            new_model_data["sizes"] = sizes_list
+        if materials_list:
+            new_model_data["materials"] = materials_list
+        
+        # Log the audit action with focused data
+        log_audit_action(
+            category="model_submodel",
+            action="add",
+            brand=brand,
+            model=model_name,
+            submodel=submodel_name,
+            user_id=st.session_state.username,
+            old_value=None,
+            new_value=new_model_data
+        )
         
         return True
     except Exception as e:
@@ -1370,11 +1556,52 @@ def update_size(size_id, new_value):
         if not engine:
             return False
         
+        # Get current size value and model details for audit logging
+        with engine.connect() as conn:
+            size_result = conn.execute(
+                text("SELECT size, model_id FROM model_sizes WHERE id = :id"),
+                {"id": size_id}
+            ).fetchone()
+            
+            if not size_result:
+                st.error("❌ Size not found")
+                return False
+            
+            old_size_value = size_result[0]
+            model_id = size_result[1]
+        
+        model_details = get_model_details_by_id(model_id)
+        if not model_details:
+            st.error("❌ Model not found")
+            return False
+        
+        brand, model_name, submodel_name = model_details
+        
+        # Get current sizes list BEFORE update
+        current_sizes = get_sizes_for_model(model_id)
+        old_sizes_list = [size[1] for size in current_sizes]
+        
         with engine.begin() as conn:
             conn.execute(
                 text("UPDATE model_sizes SET size = :size WHERE id = :id"),
                 {"size": new_value, "id": size_id}
             )
+        
+        # Get updated sizes list AFTER update
+        updated_sizes = get_sizes_for_model(model_id)
+        new_sizes_list = [size[1] for size in updated_sizes]
+        
+        # Log the audit action with before/after size lists
+        log_audit_action(
+            category="size_material",
+            action="edit",
+            brand=brand,
+            model=model_name,
+            submodel=submodel_name,
+            user_id=st.session_state.username,
+            old_value={"size": ",".join(old_sizes_list)},
+            new_value={"size": ",".join(new_sizes_list)}
+        )
         
         return True
     except Exception as e:
@@ -1388,11 +1615,52 @@ def update_material(material_id, new_value):
         if not engine:
             return False
         
+        # Get current material value and model details for audit logging
+        with engine.connect() as conn:
+            material_result = conn.execute(
+                text("SELECT material, model_id FROM model_materials WHERE id = :id"),
+                {"id": material_id}
+            ).fetchone()
+            
+            if not material_result:
+                st.error("❌ Material not found")
+                return False
+            
+            old_material_value = material_result[0]
+            model_id = material_result[1]
+        
+        model_details = get_model_details_by_id(model_id)
+        if not model_details:
+            st.error("❌ Model not found")
+            return False
+        
+        brand, model_name, submodel_name = model_details
+        
+        # Get current materials list BEFORE update
+        current_materials = get_materials_for_model(model_id)
+        old_materials_list = [material[1] for material in current_materials]
+        
         with engine.begin() as conn:
             conn.execute(
                 text("UPDATE model_materials SET material = :material WHERE id = :id"),
                 {"material": new_value, "id": material_id}
             )
+        
+        # Get updated materials list AFTER update
+        updated_materials = get_materials_for_model(model_id)
+        new_materials_list = [material[1] for material in updated_materials]
+        
+        # Log the audit action with before/after material lists
+        log_audit_action(
+            category="size_material",
+            action="edit",
+            brand=brand,
+            model=model_name,
+            submodel=submodel_name,
+            user_id=st.session_state.username,
+            old_value={"material": ",".join(old_materials_list)},
+            new_value={"material": ",".join(new_materials_list)}
+        )
         
         return True
     except Exception as e:
@@ -1406,13 +1674,61 @@ def delete_size(size_id):
         if not engine:
             return False
         
+        # Get size value and model details for audit logging before deletion
+        with engine.connect() as conn:
+            size_result = conn.execute(
+                text("SELECT size, model_id FROM model_sizes WHERE id = :id"),
+                {"id": size_id}
+            ).fetchone()
+            
+            if not size_result:
+                st.error("❌ Size not found")
+                return False
+            
+            old_size_value = size_result[0]
+            model_id = size_result[1]
+        
+        model_details = get_model_details_by_id(model_id)
+        if not model_details:
+            st.error("❌ Model not found")
+            return False
+        
+        brand, model_name, submodel_name = model_details
+        
+        # Get current sizes list BEFORE deletion
+        current_sizes = get_sizes_for_model(model_id)
+        old_sizes_list = [size[1] for size in current_sizes]
+        
         with engine.begin() as conn:
             result = conn.execute(
                 text("DELETE FROM model_sizes WHERE id = :id"),
                 {"id": size_id}
             )
-            return result.rowcount > 0
-        
+            
+            if result.rowcount > 0:
+                # Get updated sizes list AFTER deletion within the same transaction
+                updated_sizes_result = conn.execute(
+                    text("SELECT size FROM model_sizes WHERE model_id = :model_id ORDER BY size"),
+                    {"model_id": model_id}
+                ).fetchall()
+                new_sizes_list = [size[0] for size in updated_sizes_result]
+                
+                # Log the audit action with before/after size lists
+                log_audit_action(
+                    category="size_material",
+                    action="delete",
+                    brand=brand,
+                    model=model_name,
+                    submodel=submodel_name,
+                    user_id=st.session_state.username,
+                    old_value={"size": ",".join(old_sizes_list)},
+                    new_value={"size": ",".join(new_sizes_list) if new_sizes_list else ""}
+                )
+                return True
+            else:
+                st.error("❌ Size not found or already deleted")
+                return False
+    
     except Exception as e:
         st.error(f"❌ Failed to delete size: {e}")
         return False
@@ -1424,13 +1740,61 @@ def delete_material(material_id):
         if not engine:
             return False
         
+        # Get material value and model details for audit logging before deletion
+        with engine.connect() as conn:
+            material_result = conn.execute(
+                text("SELECT material, model_id FROM model_materials WHERE id = :id"),
+                {"id": material_id}
+            ).fetchone()
+            
+            if not material_result:
+                st.error("❌ Material not found")
+                return False
+            
+            old_material_value = material_result[0]
+            model_id = material_result[1]
+        
+        model_details = get_model_details_by_id(model_id)
+        if not model_details:
+            st.error("❌ Model not found")
+            return False
+        
+        brand, model_name, submodel_name = model_details
+        
+        # Get current materials list BEFORE deletion
+        current_materials = get_materials_for_model(model_id)
+        old_materials_list = [material[1] for material in current_materials]
+        
         with engine.begin() as conn:
             result = conn.execute(
                 text("DELETE FROM model_materials WHERE id = :id"),
                 {"id": material_id}
             )
-            return result.rowcount > 0
-        
+            
+            if result.rowcount > 0:
+                # Get updated materials list AFTER deletion within the same transaction
+                updated_materials_result = conn.execute(
+                    text("SELECT material FROM model_materials WHERE model_id = :model_id ORDER BY material"),
+                    {"model_id": model_id}
+                ).fetchall()
+                new_materials_list = [material[0] for material in updated_materials_result]
+                
+                # Log the audit action with before/after material lists
+                log_audit_action(
+                    category="size_material",
+                    action="delete",
+                    brand=brand,
+                    model=model_name,
+                    submodel=submodel_name,
+                    user_id=st.session_state.username,
+                    old_value={"material": ",".join(old_materials_list)},
+                    new_value={"material": ",".join(new_materials_list) if new_materials_list else ""}
+                )
+                return True
+            else:
+                st.error("❌ Material not found or already deleted")
+                return False
+    
     except Exception as e:
         st.error(f"❌ Failed to delete material: {e}")
         return False
@@ -1442,12 +1806,35 @@ def update_submodel_name(model_id, new_name):
         if not engine:
             return False
         
+        # Get current submodel name and model details for audit logging
+        model_details = get_model_details_by_id(model_id)
+        if not model_details:
+            st.error("❌ Model not found")
+            return False
+        
+        brand, model_name, old_submodel_name = model_details
+        
         with engine.begin() as conn:
             result = conn.execute(
                 text("UPDATE models SET model_name = :new_name WHERE id = :id"),
                 {"new_name": new_name, "id": model_id}
             )
-            return result.rowcount > 0
+            
+            if result.rowcount > 0:
+                # Log the audit action with only the submodel name change
+                log_audit_action(
+                    category="model_submodel",
+                    action="edit",
+                    brand=brand,
+                    model=model_name,
+                    submodel=new_name,  # Use new name for current submodel
+                    user_id=st.session_state.username,
+                    old_value={"submodel": old_submodel_name},
+                    new_value={"submodel": new_name}
+                )
+                return True
+            
+            return False
         
     except Exception as e:
         st.error(f"❌ Failed to update submodel name: {e}")
@@ -1459,6 +1846,25 @@ def delete_submodel(model_id):
         engine = get_main_db_engine()
         if not engine:
             return False
+        
+        # Get model details and associated data for audit logging before deletion
+        model_details = get_model_details_by_id(model_id)
+        if not model_details:
+            st.error("❌ Model not found")
+            return False
+        
+        brand, model_name, submodel_name = model_details
+        
+        # Get sizes and materials that will be deleted for audit
+        sizes = get_sizes_for_model(model_id)
+        materials = get_materials_for_model(model_id)
+        
+        deleted_data = {
+            "model": model_name,
+            "submodel": submodel_name,
+            "sizes": [size[1] for size in sizes],
+            "materials": [material[1] for material in materials]
+        }
         
         with engine.begin() as conn:
             # Delete associated sizes first
@@ -1479,7 +1885,21 @@ def delete_submodel(model_id):
                 {"id": model_id}
             )
             
-            return result.rowcount > 0
+            if result.rowcount > 0:
+                # Log the audit action with focused deletion data
+                log_audit_action(
+                    category="model_submodel",
+                    action="delete",
+                    brand=brand,
+                    model=model_name,
+                    submodel=submodel_name,
+                    user_id=st.session_state.username,
+                    old_value=deleted_data,
+                    new_value=None
+                )
+                return True
+            
+            return False
         
     except Exception as e:
         st.error(f"❌ Failed to delete submodel: {e}")
