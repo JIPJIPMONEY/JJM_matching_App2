@@ -411,17 +411,21 @@ def create_add_request_form(selected_brand):
     """Create form for adding new items"""
     st.markdown("#### ➕ Add New Item")
     
-    with st.form("add_request_form"):
+    # Use a session state key to force form reset
+    if "add_form_reset" not in st.session_state:
+        st.session_state.add_form_reset = 0
+    
+    with st.form("add_request_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         
         with col1:
-            model_name = st.text_input("Model *", placeholder="e.g., Vintage, Chevron")
-            size_input = st.text_input("Sizes", placeholder="e.g., 7,8,9,10 (separate with commas)")
+            model_name = st.text_input("Model *", placeholder="e.g., Vintage, Chevron", key=f"add_model_{st.session_state.add_form_reset}")
+            size_input = st.text_input("Sizes", placeholder="e.g., 7,8,9,10 (separate with commas)", key=f"add_sizes_{st.session_state.add_form_reset}")
         with col2:
-            submodel_name = st.text_input("Submodel *", placeholder="e.g., Kelly, Diana")
-            material_input = st.text_input("Materials", placeholder="e.g., Canvas, Leather (separate with commas)")
-        
-        notes = st.text_area("Additional Notes", placeholder="Any additional information...")
+            submodel_name = st.text_input("Submodel *", placeholder="e.g., Kelly, Diana", key=f"add_submodel_{st.session_state.add_form_reset}")
+            material_input = st.text_input("Materials", placeholder="e.g., Canvas, Leather (separate with commas)", key=f"add_materials_{st.session_state.add_form_reset}")
+
+        notes = st.text_area("Additional Notes", placeholder="Any additional information...", key=f"add_notes_{st.session_state.add_form_reset}")
         submitted = st.form_submit_button("📤 Submit Add Request", type="primary")
         
         if submitted:
@@ -446,22 +450,29 @@ def create_add_request_form(selected_brand):
             
             if save_model_request(request_data):
                 st.success("✅ Add request submitted successfully!")
+                # Reset form by incrementing the counter
+                st.session_state.add_form_reset += 1
                 st.rerun()
+
 
 def create_edit_request_form(selected_brand):
     """Create form for editing existing items"""
     st.markdown("#### ✏️ Edit Existing Item")
     st.info("💡 **Edit Format**: Use 'Old Value → New Value' format for edits")
     
-    with st.form("edit_request_form"):
+    # Use a session state key to force form reset
+    if "edit_form_reset" not in st.session_state:
+        st.session_state.edit_form_reset = 0
+    
+    with st.form("edit_request_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         
         with col1:
-            model_name = st.text_input("Model Edit", placeholder="e.g., Vintage → Classic")
-            size_input = st.text_input("Size Edit", placeholder="e.g., 7 → Size 7 (optional)")
+            model_name = st.text_input("Model Edit", placeholder="e.g., Vintage → Classic", key=f"edit_model_{st.session_state.edit_form_reset}")
+            size_input = st.text_input("Size Edit", placeholder="e.g., 7 → Size 7 (optional)", key=f"edit_sizes_{st.session_state.edit_form_reset}")
         with col2:
-            submodel_name = st.text_input("Submodel Edit", placeholder="e.g., Kelly → Kelly 25")
-            material_input = st.text_input("Material Edit", placeholder="e.g., Canvas → Leather (optional)")
+            submodel_name = st.text_input("Submodel Edit", placeholder="e.g., Kelly → Kelly 25", key=f"edit_submodel_{st.session_state.edit_form_reset}")
+            material_input = st.text_input("Material Edit", placeholder="e.g., Canvas → Leather (optional)", key=f"edit_materials_{st.session_state.edit_form_reset}")
         
         st.markdown("**Examples:**")
         st.markdown("- Model: `Vintage → Classic` (changes all Vintage to Classic)")
@@ -469,7 +480,7 @@ def create_edit_request_form(selected_brand):
         st.markdown("- Size: `7 → Size 7` (changes size '7' to 'Size 7')")
         st.markdown("- Material: `Canvas → Leather` (changes Canvas to Leather)")
         
-        notes = st.text_area("Reason for Edit", placeholder="Why is this edit needed?")
+        notes = st.text_area("Reason for Edit", placeholder="Why is this edit needed?", key=f"edit_notes_{st.session_state.edit_form_reset}")
         submitted = st.form_submit_button("📤 Submit Edit Request", type="primary")
         
         if submitted:
@@ -507,24 +518,30 @@ def create_edit_request_form(selected_brand):
             
             if save_model_request(request_data):
                 st.success("✅ Edit request submitted successfully!")
+                # Reset form by incrementing the counter
+                st.session_state.edit_form_reset += 1
                 st.rerun()
 
 def create_delete_request_form(selected_brand):
     """Create form for deleting existing items"""
     st.markdown("#### 🗑️ Delete Existing Item")
     
-    with st.form("delete_request_form"):
+    # Use a session state key to force form reset
+    if "delete_form_reset" not in st.session_state:
+        st.session_state.delete_form_reset = 0
+    
+    with st.form("delete_request_form", clear_on_submit=True):
         col1, col2 = st.columns(2)
         
         with col1:
-            model_name = st.text_input("Model to Delete *", placeholder="e.g., Vintage, Chevron")
-            size_input = st.text_input("Sizes to Delete", placeholder="e.g., 7,8,9,10 (separate with commas)")
+            model_name = st.text_input("Model to Delete *", placeholder="e.g., Vintage, Chevron", key=f"delete_model_{st.session_state.delete_form_reset}")
+            size_input = st.text_input("Sizes to Delete", placeholder="e.g., 7,8,9,10 (separate with commas)", key=f"delete_sizes_{st.session_state.delete_form_reset}")
         with col2:
-            submodel_name = st.text_input("Submodel to Delete *", placeholder="e.g., Kelly, Diana")
-            material_input = st.text_input("Materials to Delete", placeholder="e.g., Canvas, Leather (separate with commas)")
+            submodel_name = st.text_input("Submodel to Delete *", placeholder="e.g., Kelly, Diana", key=f"delete_submodel_{st.session_state.delete_form_reset}")
+            material_input = st.text_input("Materials to Delete", placeholder="e.g., Canvas, Leather (separate with commas)", key=f"delete_materials_{st.session_state.delete_form_reset}")
         
         st.warning("⚠️ **Deletion Warning**: This request will be reviewed by admin before any data is removed.")
-        notes = st.text_area("Reason for Deletion *", placeholder="Why should this be deleted? (Required)")
+        notes = st.text_area("Reason for Deletion *", placeholder="Why should this be deleted? (Required)", key=f"delete_notes_{st.session_state.delete_form_reset}")
         submitted = st.form_submit_button("📤 Submit Delete Request", type="primary")
         
         if submitted:
@@ -553,6 +570,8 @@ def create_delete_request_form(selected_brand):
             
             if save_model_request(request_data):
                 st.success("✅ Delete request submitted successfully!")
+                # Reset form by incrementing the counter
+                st.session_state.delete_form_reset += 1
                 st.rerun()
 
 def show_user_requests():
