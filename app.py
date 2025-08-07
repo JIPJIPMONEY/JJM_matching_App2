@@ -1025,56 +1025,28 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
         st.session_state.form_state['size'] = ''
         st.session_state.form_state['material'] = ''
     
-    # Size input - with option to use dropdown or manual entry
-    st.write("**Size:**")
+    # Size dropdown
+    sizes = ['']
+    if selected_brand and selected_model and selected_submodel:
+        brand_data = keyword_manager.get_brand_data(selected_brand)
+        if (brand_data and 
+            selected_model in brand_data and
+            selected_submodel in brand_data[selected_model]):
+            
+            submodel_data = brand_data[selected_model][selected_submodel]
+            if isinstance(submodel_data, dict) and 'sizes' in submodel_data:
+                sizes.extend(sorted(submodel_data['sizes']))
     
-    # Initialize size input mode if not exists
-    if f'size_input_mode_{context}' not in st.session_state:
-        st.session_state[f'size_input_mode_{context}'] = 'dropdown'
+    size_idx = 0
+    if st.session_state.form_state['size'] in sizes:
+        size_idx = sizes.index(st.session_state.form_state['size'])
     
-    # Option selector for size input method
-    size_input_mode = st.radio(
-        "Size input method:",
-        options=['dropdown', 'manual'],
-        index=0 if st.session_state[f'size_input_mode_{context}'] == 'dropdown' else 1,
-        format_func=lambda x: 'Use Dropdown' if x == 'dropdown' else 'Manual Entry',
-        key=f"size_mode_{context}",
-        horizontal=True
+    selected_size = st.selectbox(
+        "Size", 
+        sizes, 
+        index=size_idx,
+        key=f"edit_size_{context}"
     )
-    
-    # Update session state
-    st.session_state[f'size_input_mode_{context}'] = size_input_mode
-    
-    if size_input_mode == 'dropdown':
-        # Dropdown mode
-        sizes = ['']
-        if selected_brand and selected_model and selected_submodel:
-            brand_data = keyword_manager.get_brand_data(selected_brand)
-            if (brand_data and 
-                selected_model in brand_data and
-                selected_submodel in brand_data[selected_model]):
-                
-                submodel_data = brand_data[selected_model][selected_submodel]
-                if isinstance(submodel_data, dict) and 'sizes' in submodel_data:
-                    sizes.extend(sorted(submodel_data['sizes']))
-        
-        size_idx = 0
-        if st.session_state.form_state['size'] in sizes:
-            size_idx = sizes.index(st.session_state.form_state['size'])
-        
-        selected_size = st.selectbox(
-            "Select size:", 
-            sizes, 
-            index=size_idx,
-            key=f"edit_size_dropdown_{context}"
-        )
-    else:
-        # Manual entry mode
-        selected_size = st.text_input(
-            "Enter size manually:",
-            value=st.session_state.form_state['size'],
-            key=f"edit_size_manual_{context}"
-        )
     
     if selected_size != st.session_state.form_state['size']:
         st.session_state.form_state['size'] = selected_size
@@ -1177,14 +1149,14 @@ def create_edit_form(selected_row, keyword_manager, data_manager, context="main"
         
         # Prepare updated data
         updated_data = {
-            'Types': selected_type,
-            'Brands': selected_brand,
-            'Models': selected_model,
-            'Sub-Models': selected_submodel,
-            'Sizes': selected_size,
-            'Colors': selected_color,
-            'Hardwares': selected_hardware,
-            'Materials': selected_material
+            'Types': selected_type.strip() if selected_type else '',
+            'Brands': selected_brand.strip() if selected_brand else '',
+            'Models': selected_model.strip() if selected_model else '',
+            'Sub-Models': selected_submodel.strip() if selected_submodel else '',
+            'Sizes': selected_size.strip() if selected_size else '',
+            'Colors': selected_color.strip() if selected_color else '',
+            'Hardwares': selected_hardware.strip() if selected_hardware else '',
+            'Materials': selected_material.strip() if selected_material else ''
         }
         
         # Update the record with the status choice
@@ -1487,14 +1459,14 @@ def create_fixed_edit_form(selected_row, keyword_manager, data_manager):
         
         # Prepare updated data
         updated_data = {
-            'Types': selected_type,
-            'Brands': selected_brand,
-            'Models': selected_model,
-            'Sub-Models': selected_submodel,
-            'Sizes': selected_size,
-            'Colors': selected_color,
-            'Hardwares': selected_hardware,
-            'Materials': selected_material
+            'Types': selected_type.strip() if selected_type else '',
+            'Brands': selected_brand.strip() if selected_brand else '',
+            'Models': selected_model.strip() if selected_model else '',
+            'Sub-Models': selected_submodel.strip() if selected_submodel else '',
+            'Sizes': selected_size.strip() if selected_size else '',
+            'Colors': selected_color.strip() if selected_color else '',
+            'Hardwares': selected_hardware.strip() if selected_hardware else '',
+            'Materials': selected_material.strip() if selected_material else ''
         }
         
         # Update the record - always keep as fixed since this is the Fixed Records tab
